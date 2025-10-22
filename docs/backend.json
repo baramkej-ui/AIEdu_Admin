@@ -85,10 +85,6 @@
           "description": "The difficulty level of the question.",
           "enum": ["easy", "medium", "hard"]
         },
-        "topic": {
-            "type": "string",
-            "description": "The topic of the question."
-        },
         "grading": {
             "type": "string",
             "description": "The grading method for descriptive questions.",

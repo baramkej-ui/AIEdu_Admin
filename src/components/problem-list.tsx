@@ -48,7 +48,7 @@ export function ProblemList() {
 
   const { toast } = useToast();
 
-  const handleSaveProblem = async (problemData: Omit<Problem, 'id'>, id?: string) => {
+  const handleSaveProblem = async (problemData: Omit<Problem, 'id' | 'topic'>, id?: string) => {
     if (!firestore) return;
     
     const problemId = id || `prob-${Date.now()}`;
@@ -114,7 +114,6 @@ export function ProblemList() {
           <TableHeader>
             <TableRow>
               <TableHead>질문</TableHead>
-              <TableHead>주제</TableHead>
               <TableHead>난이도</TableHead>
               <TableHead className="text-right">액션</TableHead>
             </TableRow>
@@ -123,7 +122,6 @@ export function ProblemList() {
             {problems?.map((problem) => (
               <TableRow key={problem.id}>
                 <TableCell className="font-medium max-w-sm truncate">{problem.question}</TableCell>
-                <TableCell>{problem.topic}</TableCell>
                 <TableCell>
                   <Badge variant={problem.difficulty === 'hard' ? 'destructive' : problem.difficulty === 'medium' ? 'secondary' : 'default'}>
                     {problem.difficulty}

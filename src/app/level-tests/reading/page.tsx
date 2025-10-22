@@ -13,7 +13,7 @@ import ProtectedPage from "@/components/protected-page";
 import { PageHeader } from "@/components/page-header";
 import { useFirestore, useDoc, useMemoFirebase, setDocumentNonBlocking, useCollection } from "@/firebase";
 import { collection, doc, arrayUnion, arrayRemove } from "firebase/firestore";
-import type { LevelTest, Problem } from "@/lib/types";
+import type { Problem } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, PlusCircle, Pencil, Trash2, MoreHorizontal } from "lucide-react";
 import {
@@ -48,7 +48,9 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+} from "@/components/ui/alert-dialog";
+import type { LevelTest as LevelTestType } from '@/lib/types';
+
 
 const TEST_ID = 'reading';
 const timeOptions = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50];
@@ -61,7 +63,7 @@ export default function ReadingTestPage() {
     firestore ? doc(firestore, 'levelTests', TEST_ID) : null
   , [firestore]);
 
-  const { data: levelTestData, isLoading: isDataLoading } = useDoc<LevelTest>(testDocRef);
+  const { data: levelTestData, isLoading: isDataLoading } = useDoc<LevelTestType>(testDocRef);
 
   const problemsCollectionRef = useMemoFirebase(() => firestore ? collection(firestore, 'problems') : null, [firestore]);
   const { data: allProblems, isLoading: areProblemsLoading } = useCollection<Problem>(problemsCollectionRef);
@@ -111,7 +113,7 @@ export default function ReadingTestPage() {
     setIsSaving(false);
   };
   
-  const handleProblemSave = async (problemData: Omit<Problem, 'id'>, id?: string) => {
+  const handleProblemSave = async (problemData: Omit<Problem, 'id' | 'topic'>, id?: string) => {
     if (!firestore) return;
     
     const problemId = id || `prob-${Date.now()}`;
@@ -229,7 +231,6 @@ export default function ReadingTestPage() {
                 <TableRow>
                   <TableHead className="w-[50px]">번호</TableHead>
                   <TableHead>문제</TableHead>
-                  <TableHead>주제</TableHead>
                   <TableHead>난이도</TableHead>
                   <TableHead className="text-right">액션</TableHead>
                 </TableRow>
@@ -239,7 +240,6 @@ export default function ReadingTestPage() {
                   <TableRow key={problem.id}>
                     <TableCell>{index + 1}</TableCell>
                     <TableCell className="font-medium max-w-sm truncate">{problem.question}</TableCell>
-                    <TableCell>{problem.topic}</TableCell>
                     <TableCell>
                       <Badge variant={problem.difficulty === 'hard' ? 'destructive' : problem.difficulty === 'medium' ? 'secondary' : 'default'}>
                         {problem.difficulty}

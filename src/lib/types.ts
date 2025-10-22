@@ -18,7 +18,6 @@ export type Problem = {
   options?: string[];
   answer?: string;
   difficulty: 'easy' | 'medium' | 'hard';
-  topic: string;
   grading?: 'ai' | 'teacher';
 };
 

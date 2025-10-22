@@ -56,7 +56,6 @@ const problemSchema = z
       .optional(),
     answer: z.string().optional(),
     difficulty: z.enum(['easy', 'medium', 'hard']).default('easy'),
-    topic: z.string().min(1, '주제를 입력해주세요.'),
     grading: z.enum(['ai', 'teacher']).optional(),
   })
   .refine(
@@ -90,7 +89,7 @@ type ProblemFormData = z.infer<typeof problemSchema>;
 
 interface ProblemFormProps {
   problem?: Problem;
-  onSave: (data: Omit<Problem, 'id'>, id?: string) => Promise<void>;
+  onSave: (data: Omit<Problem, 'id' | 'topic'>, id?: string) => Promise<void>;
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
 }
@@ -110,7 +109,6 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
       options: [{ value: '' }, { value: '' }],
       answer: '',
       difficulty: 'easy',
-      topic: '',
       grading: 'ai',
     },
   });
@@ -140,7 +138,6 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
         options: [{ value: '' }, { value: '' }],
         answer: undefined,
         difficulty: 'easy',
-        topic: '',
         grading: 'ai',
       });
     }
@@ -190,34 +187,19 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 max-h-[80vh] overflow-y-auto p-1 pr-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <FormField
-                control={form.control}
-                name="number"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>문제 번호</FormLabel>
-                    <FormControl>
-                      <Input type="number" placeholder="1" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="topic"
-                render={({ field }) => (
-                  <FormItem className="md:col-span-2">
-                    <FormLabel>주제</FormLabel>
-                    <FormControl>
-                      <Input placeholder="예: React Hooks" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="number"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>문제 번호</FormLabel>
+                  <FormControl>
+                    <Input type="number" placeholder="1" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}
