@@ -30,19 +30,21 @@ export default function ReadingTestPage() {
 
   const { data: levelTestData, isLoading: isDataLoading } = useDoc<LevelTest>(testDocRef);
 
-  const [time, setTime] = React.useState<string>('0');
+  // inputValue는 사용자 입력을 위한 로컬 상태입니다.
+  const [inputValue, setInputValue] = React.useState<string>('');
   const [isSaving, setIsSaving] = React.useState(false);
 
+  // Firestore에서 데이터를 처음 로드할 때만 inputValue를 설정합니다.
   React.useEffect(() => {
     if (levelTestData) {
-      setTime(String(levelTestData.totalTimeMinutes));
+      setInputValue(String(levelTestData.totalTimeMinutes));
     }
   }, [levelTestData]);
 
   const handleSave = async () => {
     if (!firestore) return;
-    const timeValue = parseInt(time, 10);
-    if (isNaN(timeValue)) {
+    const timeValue = parseInt(inputValue, 10);
+    if (isNaN(timeValue) || timeValue < 0) {
         toast({
             variant: 'destructive',
             title: "입력 오류",
@@ -52,13 +54,18 @@ export default function ReadingTestPage() {
     }
 
     setIsSaving(true);
-    const dataToSave: LevelTest = {
-        id: TEST_ID,
-        name: 'Reading',
+    const dataToSave: Partial<LevelTest> = {
         totalTimeMinutes: timeValue
     };
     
-    await setDocumentNonBlocking(doc(firestore, 'levelTests', TEST_ID), dataToSave, { merge: true });
+    // id와 name을 포함하여 LevelTest 타입에 맞게 객체를 구성합니다.
+    const fullDataToSave: LevelTest = {
+        id: TEST_ID,
+        name: levelTestData?.name || 'Reading', // 기존 이름 사용 또는 기본값
+        ...dataToSave
+    };
+    
+    await setDocumentNonBlocking(doc(firestore, 'levelTests', TEST_ID), fullDataToSave, { merge: true });
 
     toast({
         title: "저장 완료",
@@ -82,15 +89,18 @@ export default function ReadingTestPage() {
         </CardHeader>
         <CardContent>
             {isDataLoading ? (
-                <Loader2 className="h-6 w-6 animate-spin" />
+                <div className="flex items-center space-x-2">
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                    <span>데이터를 불러오는 중입니다...</span>
+                </div>
             ) : (
                 <div className="flex items-center space-x-2">
                     <Label htmlFor="time" className="flex-shrink-0">전체 시간(분)</Label>
                     <Input 
                         id="time"
                         type="text" 
-                        value={time}
-                        onChange={(e) => setTime(e.target.value)}
+                        value={inputValue}
+                        onChange={(e) => setInputValue(e.target.value)}
                         className="w-24"
                     />
                     <Button onClick={handleSave} disabled={isSaving}>
