@@ -21,8 +21,8 @@ import ProtectedPage from "@/components/protected-page";
 import { PageHeader } from "@/components/page-header";
 import { Loader2, Save } from "lucide-react";
 import Link from 'next/link';
-import { useFirestore, useCollection, useMemoFirebase, setDocumentNonBlocking } from "@/firebase";
-import { collection, doc } from "firebase/firestore";
+import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { collection, doc, setDoc } from "firebase/firestore";
 import type { LevelTest, LevelTestCategory } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 
@@ -52,27 +52,16 @@ export default function LevelTestsPage() {
 
   React.useEffect(() => {
     if (levelTests) {
-      const initialTimes: Record<LevelTestCategory, string> = {
-        Writing: '',
-        Reading: '',
-        Speaking: '',
-        Listening: '',
-      };
+      const initialTimes = { ...timeInputs };
       levelTests.forEach(test => {
         if (test.id in initialTimes) {
-          initialTimes[test.id as LevelTestCategory] = String(test.totalTime || '');
+          initialTimes[test.id as LevelTestCategory] = String(test.totalTime ?? '');
         }
       });
-      // Set initial values for all categories, even if they don't exist in firestore yet
-      testCategories.forEach(cat => {
-        if (!initialTimes[cat]) {
-            const foundTest = levelTests.find(t => t.id === cat);
-            initialTimes[cat] = foundTest ? String(foundTest.totalTime) : '0';
-        }
-      });
-
       setTimeInputs(initialTimes);
     }
+    // The dependency array is intentionally empty to only run this once on initial mount
+    // and prevent re-renders on every input change. We will manage state locally.
   }, [levelTests]);
 
 
@@ -84,36 +73,26 @@ export default function LevelTestsPage() {
   const handleSaveTime = async (category: LevelTestCategory) => {
     if (!firestore) return;
     
-    const existingTest = levelTests?.find(t => t.id === category);
-    const problemsToSave = existingTest?.problems || [];
-
     setSavingStates(prev => ({ ...prev, [category]: true }));
     
     const timeToSave = timeInputs[category] === '' ? 0 : parseInt(timeInputs[category], 10);
+    const existingTest = levelTests?.find(t => t.id === category);
+    const problemsToSave = existingTest?.problems || [];
+    
     const docRef = doc(firestore, 'level-tests', category);
     
     try {
-      // Using a custom async version of setDocumentNonBlocking for toast handling
-      await new Promise<void>((resolve, reject) => {
-        setDoc(docRef, { id: category, totalTime: timeToSave, problems: problemsToSave }, { merge: true })
-          .then(() => {
-            toast({
-              title: "저장 완료",
-              description: `${category} 테스트의 전체 시간이 ${timeToSave}분으로 설정되었습니다.`,
-            });
-            resolve();
-          })
-          .catch((error) => {
-            toast({
-              variant: "destructive",
-              title: "저장 실패",
-              description: "시간을 저장하는 중 오류가 발생했습니다.",
-            });
-            reject(error);
-          });
+      await setDoc(docRef, { id: category, totalTime: timeToSave, problems: problemsToSave }, { merge: true });
+      toast({
+        title: "저장 완료",
+        description: `${category} 테스트의 전체 시간이 ${timeToSave}분으로 설정되었습니다.`,
       });
     } catch (error) {
-       // Errors are handled in the promise catch block
+       toast({
+          variant: "destructive",
+          title: "저장 실패",
+          description: "시간을 저장하는 중 오류가 발생했습니다.",
+        });
     } finally {
       setSavingStates(prev => ({ ...prev, [category]: false }));
     }
@@ -171,7 +150,7 @@ export default function LevelTestsPage() {
                     </TableCell>
                     <TableCell>{getProblemCount(category)} 문제</TableCell>
                     <TableCell className="text-right">
-                      <Button asChild>
+                       <Button asChild>
                         <Link href={`/coming-soon`}>관리</Link>
                       </Button>
                     </TableCell>
