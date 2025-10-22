@@ -47,9 +47,27 @@
           "type": "string",
           "description": "Unique identifier for the Problem entity."
         },
+        "number": {
+            "type": "number",
+            "description": "The number of the problem."
+        },
         "question": {
           "type": "string",
           "description": "The text of the question."
+        },
+        "question2": {
+            "type": "string",
+            "description": "Optional secondary question or instruction."
+        },
+        "type": {
+            "type": "string",
+            "description": "The type of the question.",
+            "enum": ["multiple-choice", "subjective"]
+        },
+        "subType": {
+            "type": "string",
+            "description": "The sub-type for subjective questions.",
+            "enum": ["short-answer", "descriptive"]
         },
         "options": {
           "type": "array",
@@ -70,87 +88,18 @@
         "topic": {
             "type": "string",
             "description": "The topic of the question."
+        },
+        "grading": {
+            "type": "string",
+            "description": "The grading method for descriptive questions.",
+            "enum": ["ai", "teacher"]
         }
       },
       "required": [
         "id",
+        "number",
         "question",
-        "options",
-        "answer",
-        "difficulty",
-        "topic"
-      ]
-    },
-    "StudentProgress": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "StudentProgress",
-      "type": "object",
-      "description": "Represents the progress of a student on a particular problem.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the StudentProgress entity. Typically a composite of studentId and problemId."
-        },
-        "studentId": {
-          "type": "string",
-          "description": "Reference to User (Student). (Relationship: Student 1:N StudentProgress)"
-        },
-        "problemId": {
-          "type": "string",
-          "description": "Reference to Problem. (Relationship: Problem 1:N StudentProgress)"
-        },
-        "solved": {
-          "type": "boolean",
-          "description": "Indicates whether the student solved the problem."
-        },
-        "correct": {
-          "type": "boolean",
-          "description": "Indicates whether the student answered correctly."
-        },
-        "timeTaken": {
-          "type": "number",
-          "description": "The time taken by the student to solve the problem (in seconds)."
-        }
-      },
-      "required": [
-        "id",
-        "studentId",
-        "problemId",
-        "solved",
-        "correct",
-        "timeTaken"
-      ]
-    },
-    "LevelTest": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "LevelTest",
-      "type": "object",
-      "description": "Configuration for a level test.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the level test (e.g., 'reading', 'writing')."
-        },
-        "name": {
-          "type": "string",
-          "description": "Display name of the test (e.g., 'Reading Test')."
-        },
-        "totalTimeMinutes": {
-          "type": "number",
-          "description": "Total time allocated for the test in minutes."
-        },
-        "problemIds": {
-          "type": "array",
-          "description": "List of problem IDs included in this test.",
-          "items": {
-            "type": "string"
-          }
-        }
-      },
-      "required": [
-        "id",
-        "name",
-        "totalTimeMinutes"
+        "type"
       ]
     }
   },
@@ -192,40 +141,8 @@
             }
           ]
         }
-      },
-      {
-        "path": "/studentProgress/{studentProgressId}",
-        "definition": {
-          "entityName": "StudentProgress",
-          "schema": {
-            "$ref": "#/backend/entities/StudentProgress"
-          },
-          "description": "Stores the progress of students on specific problems. A student can only write to their own progress records.",
-          "params": [
-            {
-              "name": "studentProgressId",
-              "description": "The unique identifier for the student progress entry, typically a composite ID like {studentId}-{problemId}."
-            }
-          ]
-        }
-      },
-       {
-        "path": "/levelTests/{testId}",
-        "definition": {
-          "entityName": "LevelTest",
-          "schema": {
-            "$ref": "#/backend/entities/LevelTest"
-          },
-          "description": "Stores configuration for each type of level test. Writable by admins or teachers.",
-          "params": [
-            {
-              "name": "testId",
-              "description": "The unique identifier for the level test (e.g., 'reading')."
-            }
-          ]
-        }
       }
     ],
-    "reasoning": "The Firestore structure is simplified for this educational quiz app. All users are in a single 'users' collection, and all problems in a 'problems' collection. This makes querying for data straightforward. Student progress is stored in its own collection with rules to ensure students can only write to their own records. Level tests are stored in their own collection to manage test configurations, including which problems are part of each test."
+    "reasoning": "The Firestore structure is simplified for this educational quiz app. All users are in a single 'users' collection, and all problems in a 'problems' collection. This makes querying for data straightforward."
   }
 }

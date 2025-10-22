@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BookOpen, LayoutDashboard, Users, ClipboardList } from 'lucide-react';
+import { BookOpen, LayoutDashboard, Users, PlusCircle, ClipboardList } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
@@ -19,12 +19,14 @@ const navItems = {
   admin: [
     { href: '/dashboard', label: '대시보드', icon: LayoutDashboard },
     { href: '/level-tests', label: '레벨테스트 관리', icon: ClipboardList },
-    { href: '/problems', label: '문제 관리', icon: BookOpen },
+    { href: '/problems/list', label: '문제 목록', icon: BookOpen },
+    { href: '/problems/new', label: '문제 추가', icon: PlusCircle },
     { href: '/students', label: '구성원 관리', icon: Users },
   ],
   teacher: [
     { href: '/students', label: '구성원 관리', icon: Users },
-    { href: '/problems', label: '문제 관리', icon: BookOpen },
+    { href: '/problems/list', label: '문제 목록', icon: BookOpen },
+    { href: '/problems/new', label: '문제 추가', icon: PlusCircle },
   ],
   student: [
     { href: '/problems', label: '문제 풀기', icon: BookOpen },
@@ -58,7 +60,7 @@ export function SidebarNav({ isCollapsed }: SidebarNavProps) {
     <TooltipProvider>
       <nav className="flex flex-col gap-2">
         {userNavItems.map((item) => {
-          const isActive = pathname.startsWith(item.href);
+          const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
           const Icon = item.icon;
 
           return isCollapsed ? (

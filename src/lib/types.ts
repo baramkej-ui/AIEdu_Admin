@@ -10,11 +10,16 @@ export type User = {
 
 export type Problem = {
   id: string;
+  number: number;
   question: string;
-  options: string[];
-  answer: string;
+  question2?: string;
+  type: 'multiple-choice' | 'subjective';
+  subType?: 'short-answer' | 'descriptive';
+  options?: string[];
+  answer?: string;
   difficulty: 'easy' | 'medium' | 'hard';
   topic: string;
+  grading?: 'ai' | 'teacher';
 };
 
 export type StudentProgress = {
@@ -29,11 +34,4 @@ export type StudentProgress = {
 export type Student = User & {
   role: 'student';
   progress: StudentProgress[];
-};
-
-export type LevelTest = {
-    id: string;
-    name: string;
-    totalTimeMinutes: number;
-    problemIds: string[];
 };
