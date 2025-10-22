@@ -87,7 +87,7 @@ type ProblemFormData = z.infer<typeof problemSchema>;
 
 interface ProblemFormProps {
   problem?: Problem;
-  onSave: (data: Omit<Problem, 'id' | 'difficulty'>, id?: string) => Promise<void>;
+  onSave: (data: Omit<Problem, 'id'>, id?: string) => Promise<void>;
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
 }
@@ -110,7 +110,7 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
     },
   });
 
-  const { fields, append, remove, replace } = useFieldArray({
+  const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: 'options',
   });
@@ -132,14 +132,21 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
   };
 
   const optionCount = form.watch('options')?.length || 0;
-
+  
   React.useEffect(() => {
     if (isOpen) {
-      form.reset();
-      replace([]);
+      form.reset({
+        number: 1,
+        question: '',
+        question2: '',
+        type: 'multiple-choice',
+        subType: 'short-answer',
+        options: Array.from({ length: 4 }, () => ({ value: '' })),
+        answer: '',
+        grading: 'ai',
+      });
       
       if (problem) {
-        // Editing existing problem
         const optionsAsObjects = problem.options?.map(opt => ({ value: opt })) || [];
         let answerValue: string | undefined = problem.answer;
 
@@ -154,23 +161,18 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
           answer: answerValue
         });
 
-        if (problem.type === 'multiple-choice' && problem.options) {
-            handleOptionCountChange(problem.options.length);
-        }
-
       } else {
-        // Creating new problem, set default option count for MCQ
-        handleOptionCountChange(4);
+         // This makes sure that on creating a new problem, it defaults to 4 options
+         form.setValue('options', Array.from({ length: 4 }, () => ({ value: '' })))
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, problem, form.reset, replace]);
+  }, [isOpen, problem, form]);
 
 
   async function onSubmit(values: ProblemFormData) {
     setIsLoading(true);
     try {
-      const saveData: Omit<Problem, 'id' | 'difficulty'> = {
+      const saveData: Omit<Problem, 'id'> = {
         ...values,
         options: values.options?.map(opt => opt.value),
         answer: values.type === 'multiple-choice' && values.answer && values.options
@@ -256,6 +258,9 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
                         form.setValue('answer', '');
                         if (value === 'multiple-choice') {
                           handleOptionCountChange(4);
+                        } else {
+                          // Clear options when switching to subjective
+                          handleOptionCountChange(0);
                         }
                       }}
                       value={field.value}
