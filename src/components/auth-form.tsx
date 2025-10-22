@@ -59,53 +59,58 @@ export function AuthForm({ type }: AuthFormProps) {
 
   const currentFormSchema =
     type === 'signup'
-      ? formSchema
+      ? formSchema.extend({ name: z.string().min(1, '이름을 입력해주세요.')})
       : formSchema.omit({ name: true, role: true });
 
   const form = useForm<z.infer<typeof currentFormSchema>>({
     resolver: zodResolver(currentFormSchema),
     defaultValues: {
-      name: '',
       email: '',
       password: '',
+      ...(type === 'signup' ? { name: '', role: 'student' } : {}),
     },
   });
 
   async function onSubmit(values: z.infer<typeof currentFormSchema>) {
     setIsLoading(true);
+    if (!auth || !firestore) {
+        toast({
+            variant: "destructive",
+            title: "오류",
+            description: "Firebase가 초기화되지 않았습니다. 잠시 후 다시 시도해주세요."
+        });
+        setIsLoading(false);
+        return;
+    }
     try {
       if (type === 'login') {
         const { email, password } = values;
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
-        if (firestore) {
-            const userDocRef = doc(firestore, 'users', user.uid);
-            const userDoc = await getDoc(userDocRef);
-            if (userDoc.exists()) {
-                const userData = userDoc.data() as User;
-                toast({ title: "로그인 성공", description: "대시보드로 이동합니다." });
-                router.push(roleRedirects[userData.role]);
-            } else {
-                throw new Error("사용자 역할 정보를 찾을 수 없습니다.");
-            }
+        const userDocRef = doc(firestore, 'users', user.uid);
+        const userDoc = await getDoc(userDocRef);
+        if (userDoc.exists()) {
+            const userData = userDoc.data() as User;
+            toast({ title: "로그인 성공", description: "대시보드로 이동합니다." });
+            router.push(roleRedirects[userData.role]);
+        } else {
+            throw new Error("사용자 역할 정보를 찾을 수 없습니다.");
         }
       } else if (type === 'signup') {
         const { name, email, password, role } = values as z.infer<typeof formSchema>;
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
         
-        if (user && firestore) {
-           const userDocRef = doc(firestore, "users", user.uid);
-           const userData = {
-                id: user.uid,
-                name: name,
-                email: email,
-                role: role,
-                avatarUrl: `https://picsum.photos/seed/${user.uid}/40/40`
-            };
-           setDocumentNonBlocking(userDocRef, userData, { merge: true });
-        }
+        const userDocRef = doc(firestore, "users", user.uid);
+        const userData = {
+            id: user.uid,
+            name: name,
+            email: email,
+            role: role,
+            avatarUrl: `https://picsum.photos/seed/${user.uid}/40/40`
+        };
+        await setDocumentNonBlocking(userDocRef, userData, { merge: true });
         
         toast({ title: "가입 성공", description: "환영합니다! 대시보드로 이동합니다." });
         router.push(roleRedirects[role]);
@@ -146,7 +151,7 @@ export function AuthForm({ type }: AuthFormProps) {
               <FormItem>
                 <FormLabel>이름</FormLabel>
                 <FormControl>
-                  <Input placeholder="홍길동" {...field} value={field.value ?? ''} />
+                  <Input placeholder="홍길동" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
