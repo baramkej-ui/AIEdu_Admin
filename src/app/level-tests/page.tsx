@@ -52,12 +52,7 @@ export default function LevelTestsPage() {
 
   React.useEffect(() => {
     if (levelTests) {
-      const initialTimes: Record<LevelTestCategory, string> = {
-        Writing: '',
-        Reading: '',
-        Speaking: '',
-        Listening: '',
-      };
+      const initialTimes = { ...timeInputs };
       levelTests.forEach(test => {
         if (test.id in initialTimes) {
           initialTimes[test.id as LevelTestCategory] = String(test.totalTime ?? '');
@@ -65,11 +60,15 @@ export default function LevelTestsPage() {
       });
       setTimeInputs(initialTimes);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [levelTests]);
 
 
   const handleTimeChange = (category: LevelTestCategory, value: string) => {
-    setTimeInputs(prev => ({ ...prev, [category]: value }));
+    // Allow only numbers
+    if (/^\d*$/.test(value)) {
+      setTimeInputs(prev => ({ ...prev, [category]: value }));
+    }
   };
 
   const handleSaveTime = async (category: LevelTestCategory) => {
@@ -77,7 +76,20 @@ export default function LevelTestsPage() {
     
     setSavingStates(prev => ({ ...prev, [category]: true }));
     
-    const timeToSave = timeInputs[category] === '' ? 0 : parseInt(timeInputs[category], 10);
+    const timeValue = timeInputs[category];
+    const timeToSave = timeValue === '' ? 0 : parseInt(timeValue, 10);
+    
+    // Ensure it's not NaN
+    if (isNaN(timeToSave)) {
+      toast({
+          variant: "destructive",
+          title: "유효하지 않은 값",
+          description: "숫자만 입력해주세요.",
+      });
+      setSavingStates(prev => ({ ...prev, [category]: false }));
+      return;
+    }
+
     const existingTest = levelTests?.find(t => t.id === category);
     const problemsToSave = existingTest?.problems || [];
     
@@ -134,16 +146,19 @@ export default function LevelTestsPage() {
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Input
-                          type="number"
+                          type="text"
+                          pattern="\d*"
                           value={timeInputs[category]}
                           onChange={(e) => handleTimeChange(category, e.target.value)}
                           className="w-24"
+                          aria-label={`${category} 전체 시간`}
                         />
                         <Button
                           size="icon"
                           variant="ghost"
                           onClick={() => handleSaveTime(category)}
                           disabled={savingStates[category]}
+                          aria-label={`${category} 시간 저장`}
                         >
                           {savingStates[category] ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                         </Button>
