@@ -37,11 +37,11 @@ export default function LevelTestsPage() {
   , [firestore]);
   const { data: levelTests, isLoading } = useCollection<LevelTest>(levelTestsCollectionRef);
   
-  const [timeInputs, setTimeInputs] = React.useState<Record<LevelTestCategory, number>>({
-    Writing: 0,
-    Reading: 0,
-    Speaking: 0,
-    Listening: 0,
+  const [timeInputs, setTimeInputs] = React.useState<Record<LevelTestCategory, string>>({
+    Writing: '',
+    Reading: '',
+    Speaking: '',
+    Listening: '',
   });
   const [savingStates, setSavingStates] = React.useState<Record<LevelTestCategory, boolean>>({
     Writing: false,
@@ -52,50 +52,68 @@ export default function LevelTestsPage() {
 
   React.useEffect(() => {
     if (levelTests) {
-      const initialTimes = { ...timeInputs };
+      const initialTimes: Record<LevelTestCategory, string> = {
+        Writing: '',
+        Reading: '',
+        Speaking: '',
+        Listening: '',
+      };
       levelTests.forEach(test => {
         if (test.id in initialTimes) {
-          initialTimes[test.id as LevelTestCategory] = test.totalTime;
+          initialTimes[test.id as LevelTestCategory] = String(test.totalTime || '');
         }
       });
+      // Set initial values for all categories, even if they don't exist in firestore yet
+      testCategories.forEach(cat => {
+        if (!initialTimes[cat]) {
+            const foundTest = levelTests.find(t => t.id === cat);
+            initialTimes[cat] = foundTest ? String(foundTest.totalTime) : '0';
+        }
+      });
+
       setTimeInputs(initialTimes);
     }
   }, [levelTests]);
 
 
   const handleTimeChange = (category: LevelTestCategory, value: string) => {
-    const numValue = value === '' ? 0 : parseInt(value.replace(/[^0-9]/g, ''), 10);
-    if (!isNaN(numValue) && numValue >= 0) {
-      setTimeInputs(prev => ({ ...prev, [category]: numValue }));
-    } else if (value === '') {
-      setTimeInputs(prev => ({ ...prev, [category]: 0 }));
-    }
+    const numValue = value.replace(/[^0-9]/g, '');
+    setTimeInputs(prev => ({ ...prev, [category]: numValue }));
   };
 
   const handleSaveTime = async (category: LevelTestCategory) => {
     if (!firestore) return;
     
-    // Find the existing test data to merge with
     const existingTest = levelTests?.find(t => t.id === category);
     const problemsToSave = existingTest?.problems || [];
 
     setSavingStates(prev => ({ ...prev, [category]: true }));
     
-    const timeToSave = timeInputs[category];
+    const timeToSave = timeInputs[category] === '' ? 0 : parseInt(timeInputs[category], 10);
     const docRef = doc(firestore, 'level-tests', category);
     
     try {
-      await setDocumentNonBlocking(docRef, { id: category, totalTime: timeToSave, problems: problemsToSave }, { merge: true });
-      toast({
-        title: "저장 완료",
-        description: `${category} 테스트의 전체 시간이 ${timeToSave}분으로 설정되었습니다.`,
+      // Using a custom async version of setDocumentNonBlocking for toast handling
+      await new Promise<void>((resolve, reject) => {
+        setDoc(docRef, { id: category, totalTime: timeToSave, problems: problemsToSave }, { merge: true })
+          .then(() => {
+            toast({
+              title: "저장 완료",
+              description: `${category} 테스트의 전체 시간이 ${timeToSave}분으로 설정되었습니다.`,
+            });
+            resolve();
+          })
+          .catch((error) => {
+            toast({
+              variant: "destructive",
+              title: "저장 실패",
+              description: "시간을 저장하는 중 오류가 발생했습니다.",
+            });
+            reject(error);
+          });
       });
     } catch (error) {
-       toast({
-        variant: "destructive",
-        title: "저장 실패",
-        description: "시간을 저장하는 중 오류가 발생했습니다.",
-      });
+       // Errors are handled in the promise catch block
     } finally {
       setSavingStates(prev => ({ ...prev, [category]: false }));
     }
@@ -137,7 +155,7 @@ export default function LevelTestsPage() {
                         <Input
                           type="text"
                           pattern="[0-9]*"
-                          value={timeInputs[category]}
+                          value={timeInputs[category] ?? ''}
                           onChange={(e) => handleTimeChange(category, e.target.value)}
                           className="w-24"
                         />
