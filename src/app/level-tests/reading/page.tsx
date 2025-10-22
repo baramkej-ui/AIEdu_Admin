@@ -6,7 +6,6 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  CardFooter
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,29 +30,39 @@ export default function ReadingTestPage() {
 
   const { data: levelTestData, isLoading: isDataLoading } = useDoc<LevelTest>(testDocRef);
 
-  const [time, setTime] = React.useState<number>(0);
+  const [time, setTime] = React.useState<string>('0');
   const [isSaving, setIsSaving] = React.useState(false);
 
   React.useEffect(() => {
     if (levelTestData) {
-      setTime(levelTestData.totalTimeMinutes);
+      setTime(String(levelTestData.totalTimeMinutes));
     }
   }, [levelTestData]);
 
   const handleSave = async () => {
     if (!firestore) return;
+    const timeValue = parseInt(time, 10);
+    if (isNaN(timeValue)) {
+        toast({
+            variant: 'destructive',
+            title: "입력 오류",
+            description: "유효한 숫자를 입력해주세요."
+        });
+        return;
+    }
+
     setIsSaving(true);
     const dataToSave: LevelTest = {
         id: TEST_ID,
         name: 'Reading',
-        totalTimeMinutes: time
+        totalTimeMinutes: timeValue
     };
     
     await setDocumentNonBlocking(doc(firestore, 'levelTests', TEST_ID), dataToSave, { merge: true });
 
     toast({
         title: "저장 완료",
-        description: `시험 시간이 ${time}분으로 설정되었습니다.`
+        description: `시험 시간이 ${timeValue}분으로 설정되었습니다.`
     });
     setIsSaving(false);
   };
@@ -76,25 +85,21 @@ export default function ReadingTestPage() {
                 <Loader2 className="h-6 w-6 animate-spin" />
             ) : (
                 <div className="flex items-center space-x-2">
-                    <div className="grid w-full max-w-sm items-center gap-1.5">
-                        <Label htmlFor="time">전체 시간(분)</Label>
-                        <Input 
-                            id="time"
-                            type="number" 
-                            value={time}
-                            onChange={(e) => setTime(Number(e.target.value))}
-                            className="w-24"
-                        />
-                    </div>
+                    <Label htmlFor="time" className="flex-shrink-0">전체 시간(분)</Label>
+                    <Input 
+                        id="time"
+                        type="text" 
+                        value={time}
+                        onChange={(e) => setTime(e.target.value)}
+                        className="w-24"
+                    />
+                    <Button onClick={handleSave} disabled={isSaving}>
+                        {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        저장
+                    </Button>
                 </div>
             )}
         </CardContent>
-        <CardFooter>
-            <Button onClick={handleSave} disabled={isSaving}>
-              {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              저장
-            </Button>
-        </CardFooter>
       </Card>
     </ProtectedPage>
   );
