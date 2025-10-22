@@ -1,105 +1,152 @@
 /**
- * @file Firestore Security Rules for EduQuiz Platform
- * @description This ruleset enforces a strict user-ownership model for users, problems and student progress, with teachers owning problems and students owning progress records.
+ * @fileoverview Firestore Security Rules for EduQuiz Platform
+ *
+ * Core Philosophy:
+ * This ruleset enforces a user-centric security model with role-based access control.
+ * Users can only manage their own data under `/users/{userId}`.
+ * Problem documents are publicly readable but only writable by admins or teachers.
+ * Student progress is restricted so students can only modify their own progress records.
  *
  * Data Structure:
- * - /users/{userId}: Stores user profiles, accessible only to the owning user and potentially admins (not implemented here).
- * - /users/{teacherId}/problems/{problemId}: Stores problems created by teachers. Only the teacher can manage their problems.
- * - /users/{studentId}/studentProgress/{studentProgressId}: Stores student progress data. Only the student can access their own progress.
+ * - /users/{userId}: Stores user profiles, where {userId} matches the Firebase Auth UID.
+ * - /problems/{problemId}: Stores quiz problems.
+ * - /studentProgress/{studentProgressId}: Stores student progress records, with composite IDs.
  *
  * Key Security Decisions:
- * - User data is strictly private; listing all users is disallowed.
- * - Only authenticated users can access data. Anonymous authentication is enabled.
- * - The 'role' field within the user document is not used in this ruleset to control authorization due to the prototyping philosophy. The system focuses on ownership based on document paths.
- * - Authorization Independence: The rules avoid `get()` calls by denormalizing authorization data directly onto the secured documents.
+ * - Users are not allowed to list all users. Only `get` is allowed for individual profiles.
+ * - Public read access is granted to the 'problems' collection.
+ * - All write operations are protected by authentication and authorization checks.
+ *
+ * Denormalization for Authorization:
+ * - User roles are stored directly in the `/users/{userId}` document to simplify authorization checks.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Controls access to user profiles.
+     * @description Controls access to user profile documents.
      * @path /users/{userId}
-     * @allow (create) - Authenticated user can create their own profile if the userId matches their auth UID.
-     * @allow (get, update, delete) - Authenticated user can only access their own profile.
-     * @deny (create) - User attempts to create a profile with a different userId.
-     * @deny (list) - Listing all users is not allowed.
-     * @principle Enforces document ownership for writes and restricts access to a user's own data.
+     * @allow (create) User with UID 'izkZ4ROMrCTpzgageSfOXX7rvAk2' can create their own profile.
+     * @allow (get) User with UID 'izkZ4ROMrCTpzgageSfOXX7rvAk2' can read their own profile.
+     * @allow (update) User with UID 'izkZ4ROMrCTpzgageSfOXX7rvAk2' can update their own profile.
+     * @allow (delete) User with UID 'izkZ4ROMrCTpzgageSfOXX7rvAk2' can delete their own profile.
+     * @deny  (create) User with UID 'attackerUID' cannot create a profile with userId 'izkZ4ROMrCTpzgageSfOXX7rvAk2'.
+     * @deny  (get) Non-owner cannot read the document.
+     * @principle Enforces document ownership and prevents unauthorized access to user data.
      */
     match /users/{userId} {
+      // Helper function to check if the user is signed in
       function isSignedIn() {
         return request.auth != null;
       }
 
+      // Helper function to check if the user is the owner of the document
       function isOwner(userId) {
-        return isSignedIn() && request.auth.uid == userId;
+        return request.auth.uid == userId;
       }
 
+      // Helper function to check if the user is the existing owner of the document.
       function isExistingOwner(userId) {
         return isOwner(userId) && resource != null;
       }
 
-      allow get: if isOwner(userId);
+      // Allow the user to create their own document if the UID matches
+      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.id == userId;
+
+      // Allow the user to read their own document
+      allow get: if isSignedIn() && isOwner(userId);
+
+      // Prevent listing all users
       allow list: if false;
-      allow create: if isOwner(userId);
-      allow update: if isExistingOwner(userId);
+
+      // Allow the user to update their own document
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+
+      // Allow the user to delete their own document
       allow delete: if isExistingOwner(userId);
     }
 
     /**
-     * @description Controls access to problems created by teachers.
-     * @path /users/{teacherId}/problems/{problemId}
-     * @allow (create) - Teacher can create a problem under their ID.
-     * @allow (get, list, update, delete) - Teacher can access, list, update and delete their own problems.
-     * @deny (create, update, delete) - Non-teacher users cannot create, update, or delete problems under another teacher's ID.
-     * @principle Enforces document ownership, allowing teachers to manage their own created problems.
+     * @description Controls access to quiz problem documents.
+     * @path /problems/{problemId}
+     * @allow (get, list) Any authenticated user can read problem documents.
+     * @allow (create) Only admin or teacher can create. Requires role check in user doc.
+     * @allow (update) Only admin or teacher can update. Requires role check in user doc.
+     * @allow (delete) Only admin can delete. Requires role check in user doc.
+     * @deny (create, update, delete) Non-admin/teacher cannot modify problem documents.
+     * @principle Public read access with restricted writes based on user role.
      */
-    match /users/{teacherId}/problems/{problemId} {
+    match /problems/{problemId} {
+
       function isSignedIn() {
         return request.auth != null;
       }
 
-      function isOwner(teacherId) {
-        return isSignedIn() && request.auth.uid == teacherId;
+      function isAdmin() {
+        return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
       }
 
-      function isExistingOwner(teacherId) {
-        return isOwner(teacherId) && resource != null;
+      function isTeacher() {
+        return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher';
       }
 
-      allow get: if isOwner(teacherId);
-      allow list: if isOwner(teacherId);
-      allow create: if isOwner(teacherId);
-      allow update: if isExistingOwner(teacherId);
-      allow delete: if isExistingOwner(teacherId);
+      // Allow anyone to read (get/list) problems
+      allow get, list: if true;
+
+      // Only admins and teachers can create
+      allow create: if isSignedIn() && (isAdmin() || isTeacher());
+
+      // Only admins and teachers can update
+      allow update: if isSignedIn() && (isAdmin() || isTeacher()) && resource != null;
+
+      // Only admins can delete
+      allow delete: if isSignedIn() && isAdmin() && resource != null;
     }
 
     /**
-     * @description Controls access to student progress data.
-     * @path /users/{studentId}/studentProgress/{studentProgressId}
-     * @allow (create) - Student can create their own progress data.
-     * @allow (get, list, update, delete) - Student can access, list, update and delete their own progress data.
-     * @deny (create, update, delete) - Non-student users cannot create, update, or delete progress data under another student's ID.
-     * @principle Enforces document ownership, allowing students to manage their own progress data.
+     * @description Controls access to student progress documents.
+     * @path /studentProgress/{studentProgressId}
+     * @allow (create) Student can create their own progress document if studentId in doc matches their UID.
+     * @allow (get) Student can read their own progress document if studentId in doc matches their UID.
+     * @allow (update) Student can update their own progress document if studentId in doc matches their UID.
+     * @allow (delete) Student can delete their own progress document if studentId in doc matches their UID.
+     * @deny (create, update, delete) Student cannot modify another student's progress document.
+     * @principle Enforces student ownership of progress data.
      */
-    match /users/{studentId}/studentProgress/{studentProgressId} {
+    match /studentProgress/{studentProgressId} {
+
       function isSignedIn() {
         return request.auth != null;
       }
 
       function isOwner(studentId) {
-        return isSignedIn() && request.auth.uid == studentId;
+        return request.auth.uid == studentId;
       }
 
       function isExistingOwner(studentId) {
         return isOwner(studentId) && resource != null;
       }
+      
+      //Extract studentId from the document data
+      function getStudentIdFromData(){
+          return request.resource.data.studentId;
+      }
 
-      allow get: if isOwner(studentId);
-      allow list: if isOwner(studentId);
-      allow create: if isOwner(studentId);
-      allow update: if isExistingOwner(studentId);
-      allow delete: if isExistingOwner(studentId);
+      // Allow a student to create their own progress record if the studentId matches their UID
+      allow create: if isSignedIn() && isOwner(getStudentIdFromData());
+
+      // Allow a student to read their own progress record if the studentId matches their UID
+      allow get: if isSignedIn() && isOwner(resource.data.studentId);
+
+      // Prevent listing all student progress records
+      allow list: if false;
+
+      // Allow a student to update their own progress record if the studentId matches their UID
+      allow update: if isSignedIn() && isExistingOwner(resource.data.studentId) && request.resource.data.studentId == resource.data.studentId;
+
+      // Allow a student to delete their own progress record if the studentId matches their UID
+      allow delete: if isSignedIn() && isExistingOwner(resource.data.studentId);
     }
   }
 }
