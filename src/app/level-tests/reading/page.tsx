@@ -119,7 +119,11 @@ export default function ReadingTestPage() {
     
     const problemId = id || `prob-${Date.now()}`;
     const problemDocRef = doc(firestore, 'problems', problemId);
-    setDocumentNonBlocking(problemDocRef, { ...problemData, difficulty: 'easy'}, { merge: true }); // difficulty is required by type, but not used.
+    // `difficulty` is not part of the form anymore, so it's not in problemData
+    // We should decide what to do with it. For now, let's remove it or set a default.
+    // As it is removed from the type, we should remove it from here.
+    const { ...restData } = problemData as any; // Temporary to avoid TS error
+    setDocumentNonBlocking(problemDocRef, restData, { merge: true });
 
     if (!id && testDocRef) {
         setDocumentNonBlocking(testDocRef, { problemIds: arrayUnion(problemId) }, { merge: true });

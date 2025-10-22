@@ -45,7 +45,7 @@ const problemSchema = z
     question: z.string().min(1, '질문은 최소 1자 이상이어야 합니다.'),
     question2: z.string().optional(),
     type: z.enum(['multiple-choice', 'subjective']).default('multiple-choice'),
-    subType: z.enum(['short-answer', 'descriptive']).optional(),
+    subType: z.enum(['short-answer', 'descriptive']).default('short-answer'),
     options: z
       .array(
         z.object({
@@ -135,41 +135,42 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
 
   React.useEffect(() => {
     if (isOpen) {
-      form.reset({
-        number: 1,
-        question: '',
-        question2: '',
-        type: 'multiple-choice',
-        subType: 'short-answer',
-        options: [],
-        answer: undefined,
-        grading: 'ai',
-      });
+      form.reset();
       replace([]);
-
+      
       if (problem) {
         // Editing existing problem
-        const answerIndex = problem.options?.indexOf(problem.answer || '') ?? -1;
         const optionsAsObjects = problem.options?.map(opt => ({ value: opt })) || [];
+        let answerValue: string | undefined = problem.answer;
+
+        if (problem.type === 'multiple-choice') {
+            const answerIndex = problem.options?.indexOf(problem.answer || '') ?? -1;
+            answerValue = answerIndex > -1 ? String(answerIndex) : undefined;
+        }
+
         form.reset({
           ...problem,
           options: optionsAsObjects,
-          answer: answerIndex > -1 ? String(answerIndex) : undefined
+          answer: answerValue
         });
-        replace(optionsAsObjects);
+
+        if (problem.type === 'multiple-choice' && problem.options) {
+            handleOptionCountChange(problem.options.length);
+        }
+
       } else {
-        // Creating new problem
+        // Creating new problem, set default option count for MCQ
         handleOptionCountChange(4);
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, problem]);
+  }, [isOpen, problem, form.reset, replace]);
 
 
   async function onSubmit(values: ProblemFormData) {
     setIsLoading(true);
     try {
-      const saveData = {
+      const saveData: Omit<Problem, 'id' | 'difficulty'> = {
         ...values,
         options: values.options?.map(opt => opt.value),
         answer: values.type === 'multiple-choice' && values.answer && values.options
@@ -177,7 +178,7 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
             : values.answer,
       };
       
-      await onSave(saveData as Omit<Problem, 'id' | 'difficulty'>, problem?.id);
+      await onSave(saveData, problem?.id);
       setIsOpen(false);
     } catch (error) {
       toast({
@@ -208,7 +209,7 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
                 <FormItem>
                   <FormLabel>문제 번호</FormLabel>
                   <FormControl>
-                    <Input type="number" placeholder="1" {...field} className="w-48"/>
+                    <Input type="number" placeholder="1" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -352,7 +353,7 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
                         <FormControl>
                           <RadioGroup
                             onValueChange={field.onChange}
-                            value={field.value || 'short-answer'}
+                            value={field.value}
                             className="flex space-x-4"
                           >
                             <FormItem className="flex items-center space-x-2 space-y-0">

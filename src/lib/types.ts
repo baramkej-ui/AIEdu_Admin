@@ -17,7 +17,6 @@ export type Problem = {
   subType?: 'short-answer' | 'descriptive';
   options?: string[];
   answer?: string;
-  difficulty: 'easy' | 'medium' | 'hard';
   grading?: 'ai' | 'teacher';
 };
 
