@@ -135,6 +135,18 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
 
   React.useEffect(() => {
     if (isOpen) {
+      form.reset({
+        number: 1,
+        question: '',
+        question2: '',
+        type: 'multiple-choice',
+        subType: 'short-answer',
+        options: [],
+        answer: undefined,
+        grading: 'ai',
+      });
+      replace([]);
+
       if (problem) {
         // Editing existing problem
         const answerIndex = problem.options?.indexOf(problem.answer || '') ?? -1;
@@ -144,25 +156,14 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
           options: optionsAsObjects,
           answer: answerIndex > -1 ? String(answerIndex) : undefined
         });
-        // This ensures useFieldArray's `fields` are in sync with the reset values.
         replace(optionsAsObjects);
       } else {
         // Creating new problem
-        form.reset({
-          number: 1,
-          question: '',
-          question2: '',
-          type: 'multiple-choice',
-          subType: 'short-answer',
-          options: [{ value: '' }, { value: '' }, { value: '' }, { value: '' }],
-          answer: undefined,
-          grading: 'ai',
-        });
-        replace([{ value: '' }, { value: '' }, { value: '' }, { value: '' }]);
+        handleOptionCountChange(4);
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [problem, isOpen, form.reset, replace]);
+  }, [isOpen, problem]);
 
 
   async function onSubmit(values: ProblemFormData) {
@@ -291,7 +292,7 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {[2, 3, 4, 5].map(num => (
+                        {[2, 3, 4, 5, 6, 7, 8].map(num => (
                           <SelectItem key={num} value={String(num)}>{num}개</SelectItem>
                         ))}
                       </SelectContent>
