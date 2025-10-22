@@ -31,7 +31,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -77,7 +76,7 @@ export default function ReadingTestPage() {
 
   const testProblems = React.useMemo(() => {
     if (!levelTestData || !levelTestData.problemIds || !allProblems) return [];
-    return levelTestData.problemIds.map(id => allProblems.find(p => p.id === id)).filter((p): p is Problem => !!p);
+    return levelTestData.problemIds.map(id => allProblems.find(p => p.id === id)).filter((p): p is Problem => !!p).sort((a, b) => a.number - b.number);
   }, [levelTestData, allProblems]);
 
   React.useEffect(() => {
@@ -104,7 +103,9 @@ export default function ReadingTestPage() {
         totalTimeMinutes: timeValue
     };
     
-    await setDocumentNonBlocking(doc(firestore, 'levelTests', TEST_ID), dataToUpdate, { merge: true });
+    if(testDocRef) {
+      setDocumentNonBlocking(testDocRef, dataToUpdate, { merge: true });
+    }
 
     toast({
         title: "저장 완료",
@@ -118,10 +119,10 @@ export default function ReadingTestPage() {
     
     const problemId = id || `prob-${Date.now()}`;
     const problemDocRef = doc(firestore, 'problems', problemId);
-    setDocumentNonBlocking(problemDocRef, problemData, { merge: true });
+    setDocumentNonBlocking(problemDocRef, { ...problemData, difficulty: 'easy'}, { merge: true }); // difficulty is required by type, but not used.
 
     if (!id && testDocRef) {
-        await setDocumentNonBlocking(testDocRef, { problemIds: arrayUnion(problemId) }, { merge: true });
+        setDocumentNonBlocking(testDocRef, { problemIds: arrayUnion(problemId) }, { merge: true });
     }
 
     toast({
@@ -148,7 +149,7 @@ export default function ReadingTestPage() {
   const handleDelete = async () => {
     if (problemToDelete && firestore && testDocRef) {
         // We only remove the reference, not delete the problem itself from the main 'problems' collection.
-        await setDocumentNonBlocking(testDocRef, { problemIds: arrayRemove(problemToDelete) }, { merge: true });
+        setDocumentNonBlocking(testDocRef, { problemIds: arrayRemove(problemToDelete) }, { merge: true });
       
         toast({
             title: "삭제 완료",
@@ -158,6 +159,18 @@ export default function ReadingTestPage() {
     }
     setIsAlertOpen(false);
   };
+
+  const getProblemTypeDescription = (problem: Problem) => {
+    if (problem.type === 'multiple-choice') {
+      return `객관식 / ${problem.options?.length ?? 0}지선다`;
+    }
+    if (problem.type === 'subjective') {
+      if (problem.subType === 'short-answer') return '주관식 / 단답형';
+      if (problem.subType === 'descriptive') return '주관식 / 서술형';
+    }
+    return '알 수 없음';
+  };
+
 
   const isLoading = isDataLoading || areProblemsLoading;
 
@@ -231,14 +244,16 @@ export default function ReadingTestPage() {
                 <TableRow>
                   <TableHead className="w-[50px]">번호</TableHead>
                   <TableHead>문제</TableHead>
+                  <TableHead>유형</TableHead>
                   <TableHead className="text-right">액션</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {testProblems.map((problem, index) => (
+                {testProblems.map((problem) => (
                   <TableRow key={problem.id}>
-                    <TableCell>{index + 1}</TableCell>
+                    <TableCell>{problem.number}</TableCell>
                     <TableCell className="font-medium max-w-sm truncate">{problem.question}</TableCell>
+                    <TableCell className="text-muted-foreground">{getProblemTypeDescription(problem)}</TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>

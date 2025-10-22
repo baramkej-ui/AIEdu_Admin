@@ -54,14 +54,13 @@ const problemSchema = z
       )
       .optional(),
     answer: z.string().optional(),
-    difficulty: z.enum(['easy', 'medium', 'hard']).default('easy'),
     grading: z.enum(['ai', 'teacher']).optional(),
   })
   .refine(
     (data) => {
       if (data.type === 'multiple-choice') {
         return (
-          data.options && data.options.length >= 2 && data.answer !== undefined
+          data.options && data.options.length >= 2 && data.answer !== undefined && data.answer !== ''
         );
       }
       return true;
@@ -88,7 +87,7 @@ type ProblemFormData = z.infer<typeof problemSchema>;
 
 interface ProblemFormProps {
   problem?: Problem;
-  onSave: (data: Omit<Problem, 'id'>, id?: string) => Promise<void>;
+  onSave: (data: Omit<Problem, 'id'|'difficulty'>, id?: string) => Promise<void>;
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
 }
@@ -107,7 +106,6 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
       subType: 'short-answer',
       options: [{ value: '' }, { value: '' }, { value: '' }, { value: '' }],
       answer: '',
-      difficulty: 'easy',
       grading: 'ai',
     },
   });
@@ -126,7 +124,7 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
         if (problem) {
             form.reset({
                 ...problem,
-                options: problem.options?.map(opt => ({ value: opt })) || [{ value: '' }, { value: '' }, { value: '' }, { value: '' }],
+                options: problem.options?.map(opt => ({ value: opt })) || [],
             });
             const currentOptionCount = problem.options?.length || 4;
              if (fields.length !== currentOptionCount) {
@@ -140,8 +138,7 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
                 type: 'multiple-choice',
                 subType: 'short-answer',
                 options: [],
-                answer: undefined,
-                difficulty: 'easy',
+                answer: '',
                 grading: 'ai',
             });
             handleOptionCountChange(4);
@@ -201,7 +198,7 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
                 <FormItem>
                   <FormLabel>문제 번호</FormLabel>
                   <FormControl>
-                    <Input type="number" placeholder="1" {...field} />
+                    <Input type="number" placeholder="1" {...field} className="w-48"/>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -215,7 +212,7 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
                 <FormItem>
                   <FormLabel>문제 1 (필수)</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="학생에게 제시될 주된 질문을 입력하세요." {...field} rows={3}/>
+                    <Textarea placeholder="학생에게 제시될 주된 질문을 입력하세요." {...field} rows={5}/>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -228,7 +225,7 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
                 <FormItem>
                   <FormLabel>문제 2 (선택)</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="필요한 경우, 추가 안내문이나 보조 질문을 입력하세요." {...field} rows={3} />
+                    <Textarea placeholder="필요한 경우, 추가 안내문이나 보조 질문을 입력하세요." {...field} rows={5} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -243,7 +240,10 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
                   <FormLabel>문제 유형</FormLabel>
                   <FormControl>
                     <RadioGroup
-                      onValueChange={field.onChange}
+                      onValueChange={(value) => {
+                        field.onChange(value)
+                        form.setValue('answer', '');
+                      }}
                       defaultValue={field.value}
                       className="flex space-x-4"
                     >
@@ -356,22 +356,25 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
                     )}
                   />
                   
-                  <FormField
-                    control={form.control}
-                    name="answer"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>
-                          정답
-                          {subjectiveType === 'short-answer' && <span className="text-destructive"> (필수)</span>}
-                        </FormLabel>
-                        <FormControl>
-                          <Textarea placeholder="주관식 정답을 입력하세요." {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  {subjectiveType !== 'descriptive' && (
+                    <FormField
+                      control={form.control}
+                      name="answer"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>
+                            정답
+                            {subjectiveType === 'short-answer' && <span className="text-destructive"> (필수)</span>}
+                          </FormLabel>
+                          <FormControl>
+                            <Textarea placeholder="주관식 정답을 입력하세요." {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+
                   {subjectiveType === 'descriptive' && (
                     <FormField
                       control={form.control}
