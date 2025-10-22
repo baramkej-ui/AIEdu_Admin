@@ -32,6 +32,7 @@ export default function LevelTestsPage() {
                 variant="outline"
                 className="h-24 text-lg"
                 onClick={() => handleButtonClick(type)}
+                disabled={type !== 'Reading'}
               >
                 {type}
               </Button>
