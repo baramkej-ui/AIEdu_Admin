@@ -65,6 +65,7 @@ export function AuthForm({ type }: AuthFormProps) {
   const form = useForm<z.infer<typeof currentFormSchema>>({
     resolver: zodResolver(currentFormSchema),
     defaultValues: {
+      name: '',
       email: '',
       password: '',
       role: 'student',
