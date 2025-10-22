@@ -69,8 +69,7 @@ export default function LevelTestsPage() {
 
 
   const handleTimeChange = (category: LevelTestCategory, value: string) => {
-    const numValue = value.replace(/[^0-9]/g, '');
-    setTimeInputs(prev => ({ ...prev, [category]: numValue }));
+    setTimeInputs(prev => ({ ...prev, [category]: value }));
   };
 
   const handleSaveTime = async (category: LevelTestCategory) => {
@@ -135,8 +134,7 @@ export default function LevelTestsPage() {
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Input
-                          type="text"
-                          pattern="[0-9]*"
+                          type="number"
                           value={timeInputs[category]}
                           onChange={(e) => handleTimeChange(category, e.target.value)}
                           className="w-24"
