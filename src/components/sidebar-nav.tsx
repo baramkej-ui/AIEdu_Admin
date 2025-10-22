@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BookOpen, LayoutDashboard, Users, PlusCircle, ClipboardList } from 'lucide-react';
+import { BookOpen, LayoutDashboard, Users, ClipboardList } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
@@ -19,14 +19,12 @@ const navItems = {
   admin: [
     { href: '/dashboard', label: '대시보드', icon: LayoutDashboard },
     { href: '/level-tests', label: '레벨테스트 관리', icon: ClipboardList },
-    { href: '/problems/list', label: '문제 목록', icon: BookOpen },
-    { href: '/problems/new', label: '문제 추가', icon: PlusCircle },
+    { href: '/problems/list', label: '학습 관리', icon: BookOpen },
     { href: '/students', label: '구성원 관리', icon: Users },
   ],
   teacher: [
     { href: '/students', label: '구성원 관리', icon: Users },
-    { href: '/problems/list', label: '문제 목록', icon: BookOpen },
-    { href: '/problems/new', label: '문제 추가', icon: PlusCircle },
+    { href: '/problems/list', label: '학습 관리', icon: BookOpen },
   ],
   student: [
     { href: '/problems', label: '문제 풀기', icon: BookOpen },
