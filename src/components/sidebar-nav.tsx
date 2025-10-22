@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BookOpen, LayoutDashboard, Users } from 'lucide-react';
+import { BookOpen, LayoutDashboard, Users, ClipboardList } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
@@ -18,6 +18,7 @@ import {
 const navItems = {
   admin: [
     { href: '/dashboard', label: '대시보드', icon: LayoutDashboard },
+    { href: '/coming-soon', label: '레벨테스트 관리', icon: ClipboardList },
     { href: '/problems', label: '문제 관리', icon: BookOpen },
     { href: '/students', label: '구성원 관리', icon: Users },
   ],
