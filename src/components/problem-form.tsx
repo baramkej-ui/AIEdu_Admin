@@ -104,7 +104,7 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
       question2: '',
       type: 'multiple-choice',
       subType: 'short-answer',
-      options: [{ value: '' }, { value: '' }, { value: '' }, { value: '' }],
+      options: [],
       answer: '',
       grading: 'ai',
     },
@@ -122,9 +122,11 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
   React.useEffect(() => {
     if (isOpen) {
         if (problem) {
+            const answerIndex = problem.options?.indexOf(problem.answer || '') ?? -1;
             form.reset({
                 ...problem,
                 options: problem.options?.map(opt => ({ value: opt })) || [],
+                answer: answerIndex > -1 ? String(answerIndex) : undefined
             });
             const currentOptionCount = problem.options?.length || 4;
              if (fields.length !== currentOptionCount) {
@@ -138,12 +140,13 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
                 type: 'multiple-choice',
                 subType: 'short-answer',
                 options: [],
-                answer: '',
+                answer: undefined,
                 grading: 'ai',
             });
             handleOptionCountChange(4);
         }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [problem, form, isOpen]);
 
   const handleOptionCountChange = (count: number) => {
@@ -165,9 +168,12 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
       const saveData = {
         ...values,
         options: values.options?.map(opt => opt.value),
+        answer: values.type === 'multiple-choice' && values.answer
+            ? values.options?.[parseInt(values.answer, 10)]?.value
+            : values.answer,
       };
-      // @ts-ignore
-      await onSave(saveData, problem?.id);
+      
+      await onSave(saveData as Omit<Problem, 'id' | 'difficulty'>, problem?.id);
       setIsOpen(false);
     } catch (error) {
       toast({
@@ -311,7 +317,7 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
                                         className="flex-grow"
                                       />
                                     </FormControl>
-                                    <RadioGroupItem value={optionField.value} id={`r${index}`} />
+                                    <RadioGroupItem value={String(index)} id={`r${index}`} />
                                     <Label htmlFor={`r${index}`} className="font-normal cursor-pointer">정답</Label>
                                   </FormItem>
                                 )}
