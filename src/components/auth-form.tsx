@@ -21,8 +21,8 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth, useFirestore, setDocumentNonBlocking } from '@/firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
-import { doc } from 'firebase/firestore';
-import type { UserRole } from '@/lib/types';
+import { doc, getDoc } from 'firebase/firestore';
+import type { UserRole, User } from '@/lib/types';
 import {
   Select,
   SelectContent,
@@ -60,7 +60,7 @@ export function AuthForm({ type }: AuthFormProps) {
   const currentFormSchema =
     type === 'signup'
       ? formSchema
-      : formSchema.omit({ name: true });
+      : formSchema.omit({ name: true, role: true });
 
   const form = useForm<z.infer<typeof currentFormSchema>>({
     resolver: zodResolver(currentFormSchema),
@@ -68,7 +68,6 @@ export function AuthForm({ type }: AuthFormProps) {
       name: '',
       email: '',
       password: '',
-      role: 'student',
     },
   });
 
@@ -77,10 +76,20 @@ export function AuthForm({ type }: AuthFormProps) {
     try {
       if (type === 'login') {
         const { email, password } = values;
-        await signInWithEmailAndPassword(auth, email, password);
-        toast({ title: "로그인 성공", description: "대시보드로 이동합니다." });
-        router.push(roleRedirects[values.role]);
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
 
+        if (firestore) {
+            const userDocRef = doc(firestore, 'users', user.uid);
+            const userDoc = await getDoc(userDocRef);
+            if (userDoc.exists()) {
+                const userData = userDoc.data() as User;
+                toast({ title: "로그인 성공", description: "대시보드로 이동합니다." });
+                router.push(roleRedirects[userData.role]);
+            } else {
+                throw new Error("사용자 역할 정보를 찾을 수 없습니다.");
+            }
+        }
       } else if (type === 'signup') {
         const { name, email, password, role } = values as z.infer<typeof formSchema>;
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -105,7 +114,7 @@ export function AuthForm({ type }: AuthFormProps) {
       console.error(error);
       const errorCode = error.code;
       let errorMessage = "오류가 발생했습니다.";
-      if (errorCode === 'auth/user-not-found' || errorCode === 'auth/wrong-password') {
+      if (errorCode === 'auth/user-not-found' || errorCode === 'auth/wrong-password' || errorCode === 'auth/invalid-credential') {
         errorMessage = '이메일 또는 비밀번호가 잘못되었습니다.';
       } else if (errorCode === 'auth/email-already-in-use') {
         errorMessage = '이미 사용 중인 이메일입니다.';
@@ -113,6 +122,8 @@ export function AuthForm({ type }: AuthFormProps) {
         errorMessage = '유효하지 않은 이메일 주소입니다.';
       } else if (errorCode === 'auth/weak-password') {
         errorMessage = '비밀번호는 6자 이상이어야 합니다.';
+      } else {
+        errorMessage = error.message || errorMessage;
       }
       toast({
         variant: 'destructive',
@@ -135,7 +146,7 @@ export function AuthForm({ type }: AuthFormProps) {
               <FormItem>
                 <FormLabel>이름</FormLabel>
                 <FormControl>
-                  <Input placeholder="홍길동" {...field} />
+                  <Input placeholder="홍길동" {...field} value={field.value ?? ''} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -168,28 +179,30 @@ export function AuthForm({ type }: AuthFormProps) {
             </FormItem>
           )}
         />
-        <FormField
-          control={form.control}
-          name="role"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>역할</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="역할 선택..." />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="admin">관리자</SelectItem>
-                  <SelectItem value="teacher">교사</SelectItem>
-                  <SelectItem value="student">학생</SelectItem>
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {type === 'signup' && (
+            <FormField
+            control={form.control}
+            name="role"
+            render={({ field }) => (
+                <FormItem>
+                <FormLabel>역할</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                    <SelectTrigger>
+                        <SelectValue placeholder="역할 선택..." />
+                    </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                    <SelectItem value="admin">관리자</SelectItem>
+                    <SelectItem value="teacher">교사</SelectItem>
+                    <SelectItem value="student">학생</SelectItem>
+                    </SelectContent>
+                </Select>
+                <FormMessage />
+                </FormItem>
+            )}
+            />
+        )}
         <Button type="submit" className="w-full" disabled={isLoading}>
           {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           {type === 'login' ? '로그인' : '가입하기'}
