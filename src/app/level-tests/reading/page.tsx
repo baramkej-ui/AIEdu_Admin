@@ -16,9 +16,16 @@ import { doc } from "firebase/firestore";
 import type { LevelTest } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const TEST_ID = 'reading';
+const timeOptions = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50];
 
 export default function ReadingTestPage() {
   const firestore = useFirestore();
@@ -30,36 +37,33 @@ export default function ReadingTestPage() {
 
   const { data: levelTestData, isLoading: isDataLoading } = useDoc<LevelTest>(testDocRef);
 
-  const [inputValue, setInputValue] = React.useState<string>('');
+  const [selectedValue, setSelectedValue] = React.useState<string>('0');
   const [isSaving, setIsSaving] = React.useState(false);
 
   React.useEffect(() => {
     if (levelTestData) {
-      setInputValue(String(levelTestData.totalTimeMinutes));
+      setSelectedValue(String(levelTestData.totalTimeMinutes));
     }
   }, [levelTestData]);
 
   const handleSave = async () => {
     if (!firestore) return;
-    const timeValue = parseInt(inputValue, 10);
+    const timeValue = parseInt(selectedValue, 10);
     if (isNaN(timeValue) || timeValue < 0) {
         toast({
             variant: 'destructive',
             title: "입력 오류",
-            description: "유효한 숫자를 입력해주세요."
+            description: "유효한 시간을 선택해주세요."
         });
         return;
     }
 
     setIsSaving(true);
-    const dataToSave: Partial<LevelTest> = {
-        totalTimeMinutes: timeValue
-    };
     
     const fullDataToSave: LevelTest = {
         id: TEST_ID,
         name: levelTestData?.name || 'Reading',
-        ...dataToSave
+        totalTimeMinutes: timeValue
     };
     
     await setDocumentNonBlocking(doc(firestore, 'levelTests', TEST_ID), fullDataToSave, { merge: true });
@@ -92,15 +96,22 @@ export default function ReadingTestPage() {
                 </div>
             ) : (
                 <div className="flex items-center space-x-2">
-                    <Label htmlFor="time" className="flex-shrink-0">전체 시간(분)</Label>
-                    <Input
-                        id="time"
-                        type="text"
-                        value={inputValue}
-                        onChange={(e) => setInputValue(e.target.value)}
-                        className="w-full"
-                        placeholder="10-100자 사이로 입력"
-                    />
+                    <Label htmlFor="time-select" className="flex-shrink-0">전체 시간(분)</Label>
+                    <Select
+                        value={selectedValue}
+                        onValueChange={setSelectedValue}
+                    >
+                      <SelectTrigger id="time-select" className="w-[180px]">
+                        <SelectValue placeholder="시간 선택..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {timeOptions.map(time => (
+                          <SelectItem key={time} value={String(time)}>
+                            {time}분
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <Button onClick={handleSave} disabled={isSaving}>
                         {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         저장
