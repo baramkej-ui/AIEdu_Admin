@@ -120,34 +120,6 @@
         "correct",
         "timeTaken"
       ]
-    },
-    "LevelTest": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "LevelTest",
-      "type": "object",
-      "description": "Represents a level test configuration for a specific category.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the LevelTest, e.g., 'Reading', 'Writing'."
-        },
-        "totalTime": {
-          "type": "number",
-          "description": "The total time allocated for the test in minutes."
-        },
-        "problems": {
-          "type": "array",
-          "description": "An array of problem IDs associated with this test.",
-          "items": {
-            "type": "string"
-          }
-        }
-      },
-      "required": [
-        "id",
-        "totalTime",
-        "problems"
-      ]
     }
   },
   "auth": {
@@ -201,22 +173,6 @@
             {
               "name": "studentProgressId",
               "description": "The unique identifier for the student progress entry, typically a composite ID like {studentId}-{problemId}."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/level-tests/{testId}",
-        "definition": {
-          "entityName": "LevelTest",
-          "schema": {
-            "$ref": "#/backend/entities/LevelTest"
-          },
-          "description": "Stores the configuration for each level test category. Only writable by admin or teacher roles.",
-          "params": [
-            {
-              "name": "testId",
-              "description": "The unique identifier for the level test, which is the category name (e.g., 'Reading')."
             }
           ]
         }

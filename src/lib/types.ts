@@ -30,11 +30,3 @@ export type Student = User & {
   role: 'student';
   progress: StudentProgress[];
 };
-
-export type LevelTestCategory = 'Writing' | 'Reading' | 'Speaking' | 'Listening';
-
-export type LevelTest = {
-    id: LevelTestCategory;
-    totalTime: number; // in minutes
-    problems: string[]; // array of problem IDs
-};
