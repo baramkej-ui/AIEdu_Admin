@@ -40,7 +40,7 @@ export default function StudentsPage() {
   return (
     <ProtectedPage allowedRoles={["admin", "teacher"]}>
       <PageHeader
-        title="학생 관리"
+        title="구성원 관리"
         description="학생 목록을 보고 진행 상황을 추적하세요."
       />
       <Card>
