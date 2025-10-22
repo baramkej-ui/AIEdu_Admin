@@ -12,9 +12,11 @@ export default function LevelTestsPage() {
   const router = useRouter();
 
   const handleButtonClick = (type: string) => {
-    // For now, it navigates to a coming-soon page or a dynamic page.
-    // Let's use coming-soon for now.
-    router.push('/coming-soon');
+    if (type === 'Reading') {
+      router.push('/level-tests/reading');
+    } else {
+      router.push('/coming-soon');
+    }
   };
 
   return (
