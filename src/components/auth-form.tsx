@@ -116,7 +116,6 @@ export function AuthForm({ type }: AuthFormProps) {
         router.push(roleRedirects[role]);
       }
     } catch (error: any) {
-      console.error(error);
       const errorCode = error.code;
       let errorMessage = "오류가 발생했습니다.";
       if (errorCode === 'auth/user-not-found' || errorCode === 'auth/wrong-password' || errorCode === 'auth/invalid-credential') {
