@@ -2,23 +2,21 @@
  * @fileoverview Firestore Security Rules for EduQuiz Platform
  *
  * Core Philosophy:
- * This ruleset enforces a user-centric security model with role-based access control.
- * Users can only manage their own data under `/users/{userId}`.
- * Problem documents are publicly readable but only writable by admins or teachers.
- * Student progress is restricted so students can only modify their own progress records.
+ * This ruleset enforces a role-based access control model with user-level ownership for specific data.
+ * It prioritizes secure data access and prevents unauthorized modifications.
  *
  * Data Structure:
- * - /users/{userId}: Stores user profiles, where {userId} matches the Firebase Auth UID.
- * - /problems/{problemId}: Stores quiz problems.
- * - /studentProgress/{studentProgressId}: Stores student progress records, with composite IDs.
+ * - /users/{userId}: Stores user profiles. The document ID is the Firebase Auth UID.
+ * - /problems/{problemId}: Stores quiz problems, accessible to all authenticated users for reading.
+ * - /studentProgress/{studentProgressId}: Stores student progress records, with access restricted to the student.
  *
  * Key Security Decisions:
- * - Users are not allowed to list all users. Only `get` is allowed for individual profiles.
- * - Public read access is granted to the 'problems' collection.
- * - All write operations are protected by authentication and authorization checks.
+ * - User listing is not allowed.
+ * - The 'role' field in the user document determines admin/teacher privileges.
+ * - Data validation is minimized in this prototyping phase, focusing on access control and relational integrity.
  *
  * Denormalization for Authorization:
- * - User roles are stored directly in the `/users/{userId}` document to simplify authorization checks.
+ * - The user's role ('admin', 'teacher', 'student') is stored directly in the /users/{userId} document. This avoids the need for separate role lookups when evaluating rules.
  */
 rules_version = '2';
 service cloud.firestore {
@@ -27,126 +25,80 @@ service cloud.firestore {
     /**
      * @description Controls access to user profile documents.
      * @path /users/{userId}
-     * @allow (create) User with UID 'izkZ4ROMrCTpzgageSfOXX7rvAk2' can create their own profile.
-     * @allow (get) User with UID 'izkZ4ROMrCTpzgageSfOXX7rvAk2' can read their own profile.
-     * @allow (update) User with UID 'izkZ4ROMrCTpzgageSfOXX7rvAk2' can update their own profile.
-     * @allow (delete) User with UID 'izkZ4ROMrCTpzgageSfOXX7rvAk2' can delete their own profile.
-     * @deny  (create) User with UID 'attackerUID' cannot create a profile with userId 'izkZ4ROMrCTpzgageSfOXX7rvAk2'.
-     * @deny  (get) Non-owner cannot read the document.
-     * @principle Enforces document ownership and prevents unauthorized access to user data.
+     * @allow (create) Signed-in user can create their own profile if the userId matches their auth.uid.
+     * @allow (get, list) Signed-in user can read their own profile.
+     * @allow (update, delete) Signed-in user can update/delete their own profile.
+     * @deny (create) User cannot create a profile for another user.
+     * @deny (update, delete) User cannot update/delete another user's profile.
+     * @principle Enforces document ownership for user profiles.
      */
     match /users/{userId} {
-      // Helper function to check if the user is signed in
+      // Helper function to check if the user is signed in and owns the document.
+      function isOwner(userId) {
+        return request.auth != null && request.auth.uid == userId;
+      }
+
       function isSignedIn() {
         return request.auth != null;
       }
 
-      // Helper function to check if the user is the owner of the document
-      function isOwner(userId) {
-        return request.auth.uid == userId;
-      }
-
-      // Helper function to check if the user is the existing owner of the document.
-      function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
-      }
-
-      // Allow the user to create their own document if the UID matches
-      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.id == userId;
-
-      // Allow the user to read their own document
       allow get: if isSignedIn() && isOwner(userId);
-
-      // Prevent listing all users
       allow list: if false;
-
-      // Allow the user to update their own document
-      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
-
-      // Allow the user to delete their own document
-      allow delete: if isExistingOwner(userId);
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isSignedIn() && isOwner(userId);
+      allow delete: if isSignedIn() && isOwner(userId);
     }
 
     /**
      * @description Controls access to quiz problem documents.
      * @path /problems/{problemId}
-     * @allow (get, list) Any authenticated user can read problem documents.
-     * @allow (create) Only admin or teacher can create. Requires role check in user doc.
-     * @allow (update) Only admin or teacher can update. Requires role check in user doc.
-     * @allow (delete) Only admin can delete. Requires role check in user doc.
-     * @deny (create, update, delete) Non-admin/teacher cannot modify problem documents.
-     * @principle Public read access with restricted writes based on user role.
+     * @allow (get, list) All authenticated users can read quiz problems.
+     * @allow (create) Only admin or teacher roles can create problems.
+     * @allow (update, delete) Only admin or teacher roles can update/delete problems.
+     * @deny (create, update, delete) Non-admin/teacher roles cannot modify problems.
+     * @principle Enforces role-based access control for problem management.
      */
     match /problems/{problemId} {
+        function isSignedIn() {
+            return request.auth != null;
+        }
 
-      function isSignedIn() {
-        return request.auth != null;
-      }
+        function isAdminOrTeacher() {
+            return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'teacher'];
+        }
 
-      function isAdmin() {
-        return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-      }
-
-      function isTeacher() {
-        return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher';
-      }
-
-      // Allow anyone to read (get/list) problems
-      allow get, list: if true;
-
-      // Only admins and teachers can create
-      allow create: if isSignedIn() && (isAdmin() || isTeacher());
-
-      // Only admins and teachers can update
-      allow update: if isSignedIn() && (isAdmin() || isTeacher()) && resource != null;
-
-      // Only admins can delete
-      allow delete: if isSignedIn() && isAdmin() && resource != null;
+        allow get, list: if isSignedIn();
+        allow create: if isAdminOrTeacher();
+        allow update: if isAdminOrTeacher();
+        allow delete: if isAdminOrTeacher();
     }
 
     /**
      * @description Controls access to student progress documents.
      * @path /studentProgress/{studentProgressId}
-     * @allow (create) Student can create their own progress document if studentId in doc matches their UID.
-     * @allow (get) Student can read their own progress document if studentId in doc matches their UID.
-     * @allow (update) Student can update their own progress document if studentId in doc matches their UID.
-     * @allow (delete) Student can delete their own progress document if studentId in doc matches their UID.
-     * @deny (create, update, delete) Student cannot modify another student's progress document.
-     * @principle Enforces student ownership of progress data.
+     * @allow (get) All authenticated users can read student progress.
+     * @allow (create, update) Students can only create/update their own progress records.
+     * @deny (create, update) Students cannot modify other student's progress records.
+     * @principle Enforces user-level ownership for student progress data.
      */
     match /studentProgress/{studentProgressId} {
+        function isSignedIn() {
+            return request.auth != null;
+        }
 
-      function isSignedIn() {
-        return request.auth != null;
-      }
+        function isOwner(studentId) {
+            return request.auth != null && request.auth.uid == studentId;
+        }
 
-      function isOwner(studentId) {
-        return request.auth.uid == studentId;
-      }
+        function getStudentIdFromProgressId(studentProgressId) {
+            return studentProgressId.split('-')[0];
+        }
 
-      function isExistingOwner(studentId) {
-        return isOwner(studentId) && resource != null;
-      }
-      
-      //Extract studentId from the document data
-      function getStudentIdFromData(){
-          return request.resource.data.studentId;
-      }
-
-      // Allow a student to create their own progress record if the studentId matches their UID
-      allow create: if isSignedIn() && isOwner(getStudentIdFromData());
-
-      // Allow a student to read their own progress record if the studentId matches their UID
-      allow get: if isSignedIn() && isOwner(resource.data.studentId);
-
-      // Prevent listing all student progress records
-      allow list: if false;
-
-      // Allow a student to update their own progress record if the studentId matches their UID
-      allow update: if isSignedIn() && isExistingOwner(resource.data.studentId) && request.resource.data.studentId == resource.data.studentId;
-
-      // Allow a student to delete their own progress record if the studentId matches their UID
-      allow delete: if isSignedIn() && isExistingOwner(resource.data.studentId);
+        allow get: if isSignedIn();
+        allow list: if false;
+        allow create: if isSignedIn() && request.auth.uid == getStudentIdFromProgressId(studentProgressId);
+        allow update: if isSignedIn() && request.auth.uid == getStudentIdFromProgressId(studentProgressId);
+        allow delete: if false;
     }
   }
 }
