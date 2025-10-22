@@ -1,0 +1,180 @@
+{
+  "entities": {
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user of the EduQuiz platform.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the User entity."
+        },
+        "email": {
+          "type": "string",
+          "description": "User's email address.",
+          "format": "email"
+        },
+        "role": {
+          "type": "string",
+          "description": "Role of the user (admin, teacher, student)."
+        }
+      },
+      "required": [
+        "id",
+        "email",
+        "role"
+      ]
+    },
+    "Problem": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Problem",
+      "type": "object",
+      "description": "Represents a quiz problem.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Problem entity."
+        },
+        "question": {
+          "type": "string",
+          "description": "The text of the question."
+        },
+        "options": {
+          "type": "array",
+          "description": "Possible answer options for the question.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "answer": {
+          "type": "string",
+          "description": "The correct answer to the question."
+        },
+        "difficulty": {
+          "type": "string",
+          "description": "The difficulty level of the question."
+        },
+        "teacherId": {
+          "type": "string",
+          "description": "Reference to User (Teacher) who created the problem. (Relationship: Teacher 1:N Problem)"
+        }
+      },
+      "required": [
+        "id",
+        "question",
+        "options",
+        "answer",
+        "difficulty",
+        "teacherId"
+      ]
+    },
+    "StudentProgress": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "StudentProgress",
+      "type": "object",
+      "description": "Represents the progress of a student on a particular problem.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the StudentProgress entity."
+        },
+        "studentId": {
+          "type": "string",
+          "description": "Reference to User (Student). (Relationship: Student 1:N StudentProgress)"
+        },
+        "problemId": {
+          "type": "string",
+          "description": "Reference to Problem. (Relationship: Problem 1:N StudentProgress)"
+        },
+        "solved": {
+          "type": "boolean",
+          "description": "Indicates whether the student solved the problem."
+        },
+        "correct": {
+          "type": "boolean",
+          "description": "Indicates whether the student answered correctly."
+        },
+        "timeTaken": {
+          "type": "number",
+          "description": "The time taken by the student to solve the problem (in seconds)."
+        }
+      },
+      "required": [
+        "id",
+        "studentId",
+        "problemId",
+        "solved",
+        "correct",
+        "timeTaken"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user information. Uses path-based ownership for private user data. Includes the 'role' field to determine authorization.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{teacherId}/problems/{problemId}",
+        "definition": {
+          "entityName": "Problem",
+          "schema": {
+            "$ref": "#/backend/entities/Problem"
+          },
+          "description": "Stores problems created by teachers. Uses path-based ownership for teachers to manage their problems. This structure allows secure listing of problems created by a specific teacher (QAPs).",
+          "params": [
+            {
+              "name": "teacherId",
+              "description": "The unique identifier for the teacher who created the problem."
+            },
+            {
+              "name": "problemId",
+              "description": "The unique identifier for the problem."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{studentId}/studentProgress/{studentProgressId}",
+        "definition": {
+          "entityName": "StudentProgress",
+          "schema": {
+            "$ref": "#/backend/entities/StudentProgress"
+          },
+          "description": "Stores the progress of students on specific problems.  Uses path-based ownership to ensure students can only access their own progress data. This structure allows secure listing of a specific students progress (QAPs).",
+          "params": [
+            {
+              "name": "studentId",
+              "description": "The unique identifier for the student whose progress is being tracked."
+            },
+            {
+              "name": "studentProgressId",
+              "description": "The unique identifier for the student progress entry."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to accommodate the EduQuiz platform's user management, problem creation, and student progress tracking features, while prioritizing security and scalability. It leverages path-based ownership for private user data, and segregates data based on access requirements to guarantee rules are not filters (QAPs). The design implements Authorization Independence by avoiding `get()` calls in rules. The database will have the following collections. `users` collection is present, and the `Problem` and `StudentProgress` are stored under users collection, thus enforcing the User 1:N relationship. The user 'role' is stored in each user document to avoid custom claims (DBAC)."
+  }
+}
