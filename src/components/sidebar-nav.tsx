@@ -18,7 +18,7 @@ import {
 const navItems = {
   admin: [
     { href: '/dashboard', label: '대시보드', icon: LayoutDashboard },
-    { href: '/coming-soon', label: '레벨테스트 관리', icon: ClipboardList },
+    { href: '/level-tests', label: '레벨테스트 관리', icon: ClipboardList },
     { href: '/problems', label: '문제 관리', icon: BookOpen },
     { href: '/students', label: '구성원 관리', icon: Users },
   ],
