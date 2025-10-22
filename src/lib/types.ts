@@ -34,3 +34,9 @@ export type Student = User & {
   role: 'student';
   progress: StudentProgress[];
 };
+
+export type LevelTest = {
+    id: string;
+    totalTimeMinutes: number;
+    problemIds: string[];
+};

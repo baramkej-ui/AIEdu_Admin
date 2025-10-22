@@ -4,7 +4,7 @@ import * as React from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Loader2, PlusCircle, Trash2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -36,7 +36,6 @@ import {
   DialogClose,
 } from '@/components/ui/dialog';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
-import { cn } from '@/lib/utils';
 import { Card, CardContent } from './ui/card';
 import { Label } from './ui/label';
 
@@ -89,7 +88,7 @@ type ProblemFormData = z.infer<typeof problemSchema>;
 
 interface ProblemFormProps {
   problem?: Problem;
-  onSave: (data: Omit<Problem, 'id' | 'topic'>, id?: string) => Promise<void>;
+  onSave: (data: Omit<Problem, 'id'>, id?: string) => Promise<void>;
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
 }
@@ -106,7 +105,7 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
       question2: '',
       type: 'multiple-choice',
       subType: 'short-answer',
-      options: [{ value: '' }, { value: '' }],
+      options: [{ value: '' }, { value: '' }, { value: '' }, { value: '' }],
       answer: '',
       difficulty: 'easy',
       grading: 'ai',
@@ -120,26 +119,33 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
 
   const problemType = form.watch('type');
   const subjectiveType = form.watch('subType');
-  const optionCount = form.watch('options')?.length || 2;
+  const optionCount = form.watch('options')?.length || 4;
 
   React.useEffect(() => {
-    if (problem) {
-      form.reset({
-        ...problem,
-        options: problem.options?.map(opt => ({ value: opt })) || [{ value: '' }, { value: '' }],
-      });
-    } else {
-      form.reset({
-        number: 1,
-        question: '',
-        question2: '',
-        type: 'multiple-choice',
-        subType: 'short-answer',
-        options: [{ value: '' }, { value: '' }],
-        answer: undefined,
-        difficulty: 'easy',
-        grading: 'ai',
-      });
+    if (isOpen) {
+        if (problem) {
+            form.reset({
+                ...problem,
+                options: problem.options?.map(opt => ({ value: opt })) || [{ value: '' }, { value: '' }, { value: '' }, { value: '' }],
+            });
+            const currentOptionCount = problem.options?.length || 4;
+             if (fields.length !== currentOptionCount) {
+                handleOptionCountChange(currentOptionCount);
+            }
+        } else {
+            form.reset({
+                number: 1,
+                question: '',
+                question2: '',
+                type: 'multiple-choice',
+                subType: 'short-answer',
+                options: [],
+                answer: undefined,
+                difficulty: 'easy',
+                grading: 'ai',
+            });
+            handleOptionCountChange(4);
+        }
     }
   }, [problem, form, isOpen]);
 
@@ -163,6 +169,7 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
         ...values,
         options: values.options?.map(opt => opt.value),
       };
+      // @ts-ignore
       await onSave(saveData, problem?.id);
       setIsOpen(false);
     } catch (error) {
@@ -208,7 +215,7 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
                 <FormItem>
                   <FormLabel>문제 1 (필수)</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="학생에게 제시될 주된 질문을 입력하세요." {...field} rows={4}/>
+                    <Textarea placeholder="학생에게 제시될 주된 질문을 입력하세요." {...field} rows={3}/>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -219,7 +226,7 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
               name="question2"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>문제 2 (선택, 안내문)</FormLabel>
+                  <FormLabel>문제 2 (선택)</FormLabel>
                   <FormControl>
                     <Textarea placeholder="필요한 경우, 추가 안내문이나 보조 질문을 입력하세요." {...field} rows={3} />
                   </FormControl>
@@ -395,32 +402,6 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
                 </CardContent>
               </Card>
             )}
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                control={form.control}
-                name="difficulty"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>난이도</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                        <SelectTrigger>
-                            <SelectValue placeholder="난이도 선택..." />
-                        </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                        <SelectItem value="easy">쉬움</SelectItem>
-                        <SelectItem value="medium">보통</SelectItem>
-                        <SelectItem value="hard">어려움</SelectItem>
-                        </SelectContent>
-                    </Select>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-            </div>
-            
           </form>
         </Form>
         <DialogFooter className="pt-6 border-t mt-6">
