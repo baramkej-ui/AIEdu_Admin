@@ -33,8 +33,8 @@ import {
 
 const formSchema = z.object({
   name: z.string().optional(),
-  email: z.string().email({ message: '유효한 이메일을 입력해주세요.' }),
-  password: z.string().min(6, '비밀번호는 6자 이상이어야 합니다.'),
+  email: z.string().min(1, '이메일을 입력해주세요.').email({ message: '유효한 이메일을 입력해주세요.' }),
+  password: z.string().min(1, '비밀번호를 입력해주세요.'),
   role: z.enum(['admin', 'teacher', 'student'], {
     required_error: '역할을 선택해주세요.',
   }),
@@ -59,7 +59,7 @@ export function AuthForm({ type }: AuthFormProps) {
 
   const currentFormSchema =
     type === 'signup'
-      ? formSchema.extend({ name: z.string().min(1, '이름을 입력해주세요.')})
+      ? formSchema.extend({ name: z.string().min(1, '이름을 입력해주세요.'), password: z.string().min(6, '비밀번호는 6자 이상이어야 합니다.')})
       : formSchema.omit({ name: true, role: true });
 
   const form = useForm<z.infer<typeof currentFormSchema>>({
