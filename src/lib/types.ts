@@ -35,4 +35,5 @@ export type LevelTest = {
     id: string;
     name: string;
     totalTimeMinutes: number;
+    problemIds: string[];
 };
