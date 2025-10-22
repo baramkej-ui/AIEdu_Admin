@@ -48,7 +48,7 @@ export function ProblemList() {
 
   const { toast } = useToast();
 
-  const handleSaveProblem = async (problemData: Omit<Problem, 'id' | 'topic'>, id?: string) => {
+  const handleSaveProblem = async (problemData: Omit<Problem, 'id'>, id?: string) => {
     if (!firestore) return;
     
     const problemId = id || `prob-${Date.now()}`;

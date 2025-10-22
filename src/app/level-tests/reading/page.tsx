@@ -113,7 +113,7 @@ export default function ReadingTestPage() {
     setIsSaving(false);
   };
   
-  const handleProblemSave = async (problemData: Omit<Problem, 'id' | 'topic'>, id?: string) => {
+  const handleProblemSave = async (problemData: Omit<Problem, 'id'>, id?: string) => {
     if (!firestore) return;
     
     const problemId = id || `prob-${Date.now()}`;
@@ -231,7 +231,6 @@ export default function ReadingTestPage() {
                 <TableRow>
                   <TableHead className="w-[50px]">번호</TableHead>
                   <TableHead>문제</TableHead>
-                  <TableHead>난이도</TableHead>
                   <TableHead className="text-right">액션</TableHead>
                 </TableRow>
               </TableHeader>
@@ -240,11 +239,6 @@ export default function ReadingTestPage() {
                   <TableRow key={problem.id}>
                     <TableCell>{index + 1}</TableCell>
                     <TableCell className="font-medium max-w-sm truncate">{problem.question}</TableCell>
-                    <TableCell>
-                      <Badge variant={problem.difficulty === 'hard' ? 'destructive' : problem.difficulty === 'medium' ? 'secondary' : 'default'}>
-                        {problem.difficulty}
-                      </Badge>
-                    </TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
