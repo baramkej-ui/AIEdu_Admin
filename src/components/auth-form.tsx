@@ -60,7 +60,7 @@ export function AuthForm({ type }: AuthFormProps) {
   const currentFormSchema =
     type === 'signup'
       ? formSchema.extend({ name: z.string().min(1, '이름을 입력해주세요.'), password: z.string().min(6, '비밀번호는 6자 이상이어야 합니다.')})
-      : formSchema.omit({ name: true, role: true });
+      : formSchema;
 
   const form = useForm<z.infer<typeof currentFormSchema>>({
     resolver: zodResolver(currentFormSchema),
@@ -82,9 +82,10 @@ export function AuthForm({ type }: AuthFormProps) {
         setIsLoading(false);
         return;
     }
-    try {
-      if (type === 'login') {
-        const { email, password } = values;
+    
+    if (type === 'login') {
+      const { email, password } = values;
+      try {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
@@ -97,8 +98,25 @@ export function AuthForm({ type }: AuthFormProps) {
         } else {
             throw new Error("사용자 역할 정보를 찾을 수 없습니다.");
         }
-      } else if (type === 'signup') {
-        const { name, email, password, role } = values as z.infer<typeof formSchema>;
+      } catch (error: any) {
+          const errorCode = error.code;
+          let errorMessage = "오류가 발생했습니다.";
+          if (errorCode === 'auth/user-not-found' || errorCode === 'auth/wrong-password' || errorCode === 'auth/invalid-credential') {
+            errorMessage = '이메일 또는 비밀번호가 잘못되었습니다.';
+          } else {
+            errorMessage = error.message || errorMessage;
+          }
+          toast({
+            variant: 'destructive',
+            title: '인증 실패',
+            description: errorMessage,
+          });
+      } finally {
+        setIsLoading(false);
+      }
+    } else if (type === 'signup') {
+      const { name, email, password, role } = values as z.infer<typeof formSchema>;
+      try {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
         
@@ -114,28 +132,26 @@ export function AuthForm({ type }: AuthFormProps) {
         
         toast({ title: "가입 성공", description: "환영합니다! 대시보드로 이동합니다." });
         router.push(roleRedirects[role]);
+      } catch (error: any) {
+          const errorCode = error.code;
+          let errorMessage = "오류가 발생했습니다.";
+          if (errorCode === 'auth/email-already-in-use') {
+            errorMessage = '이미 사용 중인 이메일입니다.';
+          } else if (errorCode === 'auth/invalid-email') {
+            errorMessage = '유효하지 않은 이메일 주소입니다.';
+          } else if (errorCode === 'auth/weak-password') {
+            errorMessage = '비밀번호는 6자 이상이어야 합니다.';
+          } else {
+            errorMessage = error.message || errorMessage;
+          }
+          toast({
+            variant: 'destructive',
+            title: '가입 실패',
+            description: errorMessage,
+          });
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error: any) {
-      const errorCode = error.code;
-      let errorMessage = "오류가 발생했습니다.";
-      if (errorCode === 'auth/user-not-found' || errorCode === 'auth/wrong-password' || errorCode === 'auth/invalid-credential') {
-        errorMessage = '이메일 또는 비밀번호가 잘못되었습니다.';
-      } else if (errorCode === 'auth/email-already-in-use') {
-        errorMessage = '이미 사용 중인 이메일입니다.';
-      } else if (errorCode === 'auth/invalid-email') {
-        errorMessage = '유효하지 않은 이메일 주소입니다.';
-      } else if (errorCode === 'auth/weak-password') {
-        errorMessage = '비밀번호는 6자 이상이어야 합니다.';
-      } else {
-        errorMessage = error.message || errorMessage;
-      }
-      toast({
-        variant: 'destructive',
-        title: '인증 실패',
-        description: errorMessage,
-      });
-    } finally {
-      setIsLoading(false);
     }
   }
 

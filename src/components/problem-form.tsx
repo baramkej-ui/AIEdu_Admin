@@ -42,7 +42,7 @@ import { Label } from './ui/label';
 const problemSchema = z
   .object({
     number: z.coerce.number({ required_error: '문제 번호를 입력해주세요.' }).min(1, '문제 번호는 1 이상이어야 합니다.'),
-    question: z.string().min(10, '질문은 10자 이상이어야 합니다.'),
+    question: z.string().min(1, '질문은 최소 1자 이상이어야 합니다.'),
     question2: z.string().optional(),
     type: z.enum(['multiple-choice', 'subjective']).default('multiple-choice'),
     subType: z.enum(['short-answer', 'descriptive']).optional(),
@@ -67,7 +67,7 @@ const problemSchema = z
     },
     {
       message: '객관식 문제는 최소 2개 이상의 보기와 정답이 필요합니다.',
-      path: ['options'],
+      path: ['answer'],
     }
   )
   .refine(
@@ -87,7 +87,7 @@ type ProblemFormData = z.infer<typeof problemSchema>;
 
 interface ProblemFormProps {
   problem?: Problem;
-  onSave: (data: Omit<Problem, 'id'|'difficulty'>, id?: string) => Promise<void>;
+  onSave: (data: Omit<Problem, 'id' | 'difficulty'>, id?: string) => Promise<void>;
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
 }
@@ -110,7 +110,7 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
     },
   });
 
-  const { fields, append, remove, replace } = useFieldArray({
+  const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: 'options',
   });
@@ -135,6 +135,7 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
 
   React.useEffect(() => {
     if (isOpen) {
+        form.reset(); // Reset form state first
         if (problem) {
             const answerIndex = problem.options?.indexOf(problem.answer || '') ?? -1;
             form.reset({
@@ -151,7 +152,7 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
                 question2: '',
                 type: 'multiple-choice',
                 subType: 'short-answer',
-                options: [],
+                options: [], // Explicitly clear options
                 answer: undefined,
                 grading: 'ai',
             });
@@ -159,7 +160,7 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
         }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [problem, form, isOpen]);
+  }, [problem, isOpen]); // Removed form from dependency array to avoid re-triggering
 
 
   async function onSubmit(values: ProblemFormData) {
@@ -168,8 +169,8 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
       const saveData = {
         ...values,
         options: values.options?.map(opt => opt.value),
-        answer: values.type === 'multiple-choice' && values.answer
-            ? values.options?.[parseInt(values.answer, 10)]?.value
+        answer: values.type === 'multiple-choice' && values.answer && values.options
+            ? values.options[parseInt(values.answer, 10)]?.value
             : values.answer,
       };
       
@@ -218,7 +219,7 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
                 <FormItem>
                   <FormLabel>문제 1 (필수)</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="학생에게 제시될 주된 질문을 입력하세요." {...field} rows={5}/>
+                    <Textarea placeholder="학생에게 제시될 주된 질문을 입력하세요." {...field} rows={3}/>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -231,7 +232,7 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
                 <FormItem>
                   <FormLabel>문제 2 (선택)</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="필요한 경우, 추가 안내문이나 보조 질문을 입력하세요." {...field} rows={5} />
+                    <Textarea placeholder="필요한 경우, 추가 안내문이나 보조 질문을 입력하세요." {...field} rows={3} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -249,8 +250,11 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
                       onValueChange={(value) => {
                         field.onChange(value)
                         form.setValue('answer', '');
+                        if (value === 'multiple-choice') {
+                          handleOptionCountChange(4);
+                        }
                       }}
-                      defaultValue={field.value}
+                      value={field.value}
                       className="flex space-x-4"
                     >
                       <FormItem className="flex items-center space-x-2 space-y-0">
@@ -345,7 +349,7 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
                         <FormControl>
                           <RadioGroup
                             onValueChange={field.onChange}
-                            defaultValue={field.value}
+                            value={field.value || 'short-answer'}
                             className="flex space-x-4"
                           >
                             <FormItem className="flex items-center space-x-2 space-y-0">
@@ -391,7 +395,7 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
                           <FormControl>
                             <RadioGroup
                               onValueChange={field.onChange}
-                              defaultValue={field.value}
+                              value={field.value || 'ai'}
                               className="flex space-x-4"
                             >
                               <FormItem className="flex items-center space-x-2 space-y-0">
