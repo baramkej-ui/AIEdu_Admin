@@ -18,7 +18,7 @@ import {
   ChartLegendContent,
 } from "@/components/ui/chart";
 import { Bar, XAxis, YAxis, CartesianGrid, BarChart as RechartsBarChart } from "recharts";
-import { useCollection, useFirestore } from "@/firebase";
+import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
 import { collection, query } from "firebase/firestore";
 import type { User, Problem } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -43,10 +43,14 @@ const chartConfig = {
 export default function DashboardPage() {
   const firestore = useFirestore();
 
-  const usersQuery = firestore ? query(collection(firestore, 'users')) : null;
+  const usersQuery = useMemoFirebase(() => 
+    firestore ? query(collection(firestore, 'users')) : null
+  , [firestore]);
   const { data: usersData, isLoading: usersLoading } = useCollection<User>(usersQuery);
   
-  const problemsQuery = firestore ? query(collection(firestore, 'problems')) : null;
+  const problemsQuery = useMemoFirebase(() =>
+    firestore ? query(collection(firestore, 'problems')) : null
+  , [firestore]);
   const { data: problemsData, isLoading: problemsLoading } = useCollection<Problem>(problemsQuery);
 
   const isLoading = usersLoading || problemsLoading;
