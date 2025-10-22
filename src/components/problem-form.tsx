@@ -110,7 +110,7 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
     },
   });
 
-  const { fields, append, remove } = useFieldArray({
+  const { fields, append, remove, replace } = useFieldArray({
     control: form.control,
     name: 'options',
   });
@@ -125,8 +125,8 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
         append({ value: '' });
       }
     } else if (count < currentCount) {
-      for (let i = 0; i < currentCount - count; i++) {
-        remove(currentCount - 1 - i);
+      for (let i = currentCount - 1; i >= count; i--) {
+        remove(i);
       }
     }
   };
@@ -135,32 +135,34 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
 
   React.useEffect(() => {
     if (isOpen) {
-        form.reset(); // Reset form state first
-        if (problem) {
-            const answerIndex = problem.options?.indexOf(problem.answer || '') ?? -1;
-            form.reset({
-                ...problem,
-                options: problem.options?.map(opt => ({ value: opt })) || [],
-                answer: answerIndex > -1 ? String(answerIndex) : undefined
-            });
-            const currentOptionCount = problem.options?.length || 4;
-            handleOptionCountChange(currentOptionCount);
-        } else {
-            form.reset({
-                number: 1,
-                question: '',
-                question2: '',
-                type: 'multiple-choice',
-                subType: 'short-answer',
-                options: [], // Explicitly clear options
-                answer: undefined,
-                grading: 'ai',
-            });
-            handleOptionCountChange(4);
-        }
+      if (problem) {
+        // Editing existing problem
+        const answerIndex = problem.options?.indexOf(problem.answer || '') ?? -1;
+        const optionsAsObjects = problem.options?.map(opt => ({ value: opt })) || [];
+        form.reset({
+          ...problem,
+          options: optionsAsObjects,
+          answer: answerIndex > -1 ? String(answerIndex) : undefined
+        });
+        // This ensures useFieldArray's `fields` are in sync with the reset values.
+        replace(optionsAsObjects);
+      } else {
+        // Creating new problem
+        form.reset({
+          number: 1,
+          question: '',
+          question2: '',
+          type: 'multiple-choice',
+          subType: 'short-answer',
+          options: [{ value: '' }, { value: '' }, { value: '' }, { value: '' }],
+          answer: undefined,
+          grading: 'ai',
+        });
+        replace([{ value: '' }, { value: '' }, { value: '' }, { value: '' }]);
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [problem, isOpen]); // Removed form from dependency array to avoid re-triggering
+  }, [problem, isOpen, form.reset, replace]);
 
 
   async function onSubmit(values: ProblemFormData) {
