@@ -64,9 +64,11 @@ export default function LevelTestsPage() {
 
 
   const handleTimeChange = (category: LevelTestCategory, value: string) => {
-    const numValue = value === '' ? 0 : parseInt(value, 10);
+    const numValue = value === '' ? 0 : parseInt(value.replace(/[^0-9]/g, ''), 10);
     if (!isNaN(numValue) && numValue >= 0) {
       setTimeInputs(prev => ({ ...prev, [category]: numValue }));
+    } else if (value === '') {
+      setTimeInputs(prev => ({ ...prev, [category]: 0 }));
     }
   };
 
@@ -133,11 +135,11 @@ export default function LevelTestsPage() {
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Input
-                          type="number"
+                          type="text"
+                          pattern="[0-9]*"
                           value={timeInputs[category]}
                           onChange={(e) => handleTimeChange(category, e.target.value)}
                           className="w-24"
-                          min="0"
                         />
                         <Button
                           size="icon"
