@@ -52,7 +52,12 @@ export default function LevelTestsPage() {
 
   React.useEffect(() => {
     if (levelTests) {
-      const initialTimes = { ...timeInputs };
+      const initialTimes: Record<LevelTestCategory, string> = {
+        Writing: '',
+        Reading: '',
+        Speaking: '',
+        Listening: '',
+      };
       levelTests.forEach(test => {
         if (test.id in initialTimes) {
           initialTimes[test.id as LevelTestCategory] = String(test.totalTime ?? '');
@@ -60,8 +65,6 @@ export default function LevelTestsPage() {
       });
       setTimeInputs(initialTimes);
     }
-    // The dependency array is intentionally empty to only run this once on initial mount
-    // and prevent re-renders on every input change. We will manage state locally.
   }, [levelTests]);
 
 
@@ -134,7 +137,7 @@ export default function LevelTestsPage() {
                         <Input
                           type="text"
                           pattern="[0-9]*"
-                          value={timeInputs[category] ?? ''}
+                          value={timeInputs[category]}
                           onChange={(e) => handleTimeChange(category, e.target.value)}
                           className="w-24"
                         />
