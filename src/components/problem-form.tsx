@@ -110,14 +110,28 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
     },
   });
 
-  const { fields, append, remove } = useFieldArray({
+  const { fields, append, remove, replace } = useFieldArray({
     control: form.control,
     name: 'options',
   });
 
   const problemType = form.watch('type');
   const subjectiveType = form.watch('subType');
-  const optionCount = form.watch('options')?.length || 4;
+  
+  const handleOptionCountChange = (count: number) => {
+    const currentCount = fields.length;
+    if (count > currentCount) {
+      for (let i = 0; i < count - currentCount; i++) {
+        append({ value: '' });
+      }
+    } else if (count < currentCount) {
+      for (let i = 0; i < currentCount - count; i++) {
+        remove(currentCount - 1 - i);
+      }
+    }
+  };
+
+  const optionCount = form.watch('options')?.length || 0;
 
   React.useEffect(() => {
     if (isOpen) {
@@ -129,9 +143,7 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
                 answer: answerIndex > -1 ? String(answerIndex) : undefined
             });
             const currentOptionCount = problem.options?.length || 4;
-             if (fields.length !== currentOptionCount) {
-                handleOptionCountChange(currentOptionCount);
-            }
+            handleOptionCountChange(currentOptionCount);
         } else {
             form.reset({
                 number: 1,
@@ -149,18 +161,6 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [problem, form, isOpen]);
 
-  const handleOptionCountChange = (count: number) => {
-    const currentCount = fields.length;
-    if (count > currentCount) {
-      for (let i = 0; i < count - currentCount; i++) {
-        append({ value: '' });
-      }
-    } else if (count < currentCount) {
-      for (let i = 0; i < currentCount - count; i++) {
-        remove(currentCount - 1 - i);
-      }
-    }
-  };
 
   async function onSubmit(values: ProblemFormData) {
     setIsLoading(true);
