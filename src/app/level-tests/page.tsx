@@ -54,7 +54,9 @@ export default function LevelTestsPage() {
     if (levelTests) {
       const initialTimes = { ...timeInputs };
       levelTests.forEach(test => {
-        initialTimes[test.id as LevelTestCategory] = test.totalTime;
+        if (test.id in initialTimes) {
+          initialTimes[test.id as LevelTestCategory] = test.totalTime;
+        }
       });
       setTimeInputs(initialTimes);
     }
@@ -62,19 +64,26 @@ export default function LevelTestsPage() {
 
 
   const handleTimeChange = (category: LevelTestCategory, value: string) => {
-    setTimeInputs(prev => ({ ...prev, [category]: Number(value) }));
+    const numValue = value === '' ? 0 : parseInt(value, 10);
+    if (!isNaN(numValue)) {
+      setTimeInputs(prev => ({ ...prev, [category]: numValue }));
+    }
   };
 
   const handleSaveTime = async (category: LevelTestCategory) => {
     if (!firestore) return;
+    
+    // Find the existing test data to merge with
+    const existingTest = levelTests?.find(t => t.id === category);
+    const problemsToSave = existingTest?.problems || [];
+
     setSavingStates(prev => ({ ...prev, [category]: true }));
     
     const timeToSave = timeInputs[category];
     const docRef = doc(firestore, 'level-tests', category);
     
     try {
-      // We merge to avoid overwriting the problems array
-      await setDocumentNonBlocking(docRef, { totalTime: timeToSave }, { merge: true });
+      await setDocumentNonBlocking(docRef, { id: category, totalTime: timeToSave, problems: problemsToSave }, { merge: true });
       toast({
         title: "저장 완료",
         description: `${category} 테스트의 전체 시간이 ${timeToSave}분으로 설정되었습니다.`,
