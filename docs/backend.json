@@ -120,6 +120,34 @@
         "correct",
         "timeTaken"
       ]
+    },
+    "LevelTest": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "LevelTest",
+      "type": "object",
+      "description": "Represents a level test configuration for a specific category.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the LevelTest, e.g., 'Reading', 'Writing'."
+        },
+        "totalTime": {
+          "type": "number",
+          "description": "The total time allocated for the test in minutes."
+        },
+        "problems": {
+          "type": "array",
+          "description": "An array of problem IDs associated with this test.",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "totalTime",
+        "problems"
+      ]
     }
   },
   "auth": {
@@ -176,8 +204,24 @@
             }
           ]
         }
+      },
+      {
+        "path": "/level-tests/{testId}",
+        "definition": {
+          "entityName": "LevelTest",
+          "schema": {
+            "$ref": "#/backend/entities/LevelTest"
+          },
+          "description": "Stores the configuration for each level test category. Only writable by admin or teacher roles.",
+          "params": [
+            {
+              "name": "testId",
+              "description": "The unique identifier for the level test, which is the category name (e.g., 'Reading')."
+            }
+          ]
+        }
       }
     ],
-    "reasoning": "The Firestore structure is simplified for this educational quiz app. All users are in a single 'users' collection, and all problems in a 'problems' collection. This makes querying for data straightforward. Student progress is stored in its own collection with rules to ensure students can only write to their own records. Security is managed through Firestore rules based on the 'role' field in the user's document."
+    "reasoning": "The Firestore structure is simplified for this educational quiz app. All users are in a single 'users' collection, and all problems in a 'problems' collection. This makes querying for data straightforward. Student progress is stored in its own collection with rules to ensure students can only write to their own records. Level tests are stored in their own collection to manage test configurations. Security is managed through Firestore rules based on the 'role' field in the user's document."
   }
 }
