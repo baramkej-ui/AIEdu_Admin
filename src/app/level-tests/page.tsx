@@ -65,7 +65,7 @@ export default function LevelTestsPage() {
 
   const handleTimeChange = (category: LevelTestCategory, value: string) => {
     const numValue = value === '' ? 0 : parseInt(value, 10);
-    if (!isNaN(numValue)) {
+    if (!isNaN(numValue) && numValue >= 0) {
       setTimeInputs(prev => ({ ...prev, [category]: numValue }));
     }
   };
