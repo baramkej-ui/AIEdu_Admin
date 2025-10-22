@@ -37,6 +37,8 @@ import {
 } from '@/components/ui/dialog';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { cn } from '@/lib/utils';
+import { Card, CardContent } from './ui/card';
+import { Label } from './ui/label';
 
 const problemSchema = z
   .object({
