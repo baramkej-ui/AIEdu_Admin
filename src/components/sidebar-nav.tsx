@@ -2,10 +2,11 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BookOpen, LayoutDashboard, Users, Bot } from 'lucide-react';
-
+import { BookOpen, LayoutDashboard, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useAuth } from '@/hooks/use-auth';
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
+import type { User as DbUser } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import {
   Tooltip,
@@ -35,11 +36,22 @@ interface SidebarNavProps {
 
 export function SidebarNav({ isCollapsed }: SidebarNavProps) {
   const pathname = usePathname();
-  const { user } = useAuth();
+  const { user: authUser, isUserLoading } = useUser();
+  const firestore = useFirestore();
 
-  if (!user) return null;
+  const userDocRef = useMemoFirebase(() => {
+    if (!firestore || !authUser) return null;
+    return doc(firestore, 'users', authUser.uid);
+  }, [firestore, authUser]);
 
-  const userNavItems = navItems[user.role];
+  const { data: dbUser, isLoading: isDbUserLoading } = useDoc<DbUser>(userDocRef);
+
+  if (isUserLoading || isDbUserLoading || !dbUser) {
+    // Optionally render a skeleton loader
+    return null;
+  }
+
+  const userNavItems = navItems[dbUser.role];
 
   return (
     <TooltipProvider>

@@ -1,48 +1,72 @@
 'use client';
-import { useAuth } from '@/hooks/use-auth';
+import { useUser, useFirestore } from '@/firebase';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import AppLayout from '@/components/app-layout';
 import { Loader2 } from 'lucide-react';
-import type { UserRole } from '@/lib/types';
+import type { UserRole, User } from '@/lib/types';
+import { doc, getDoc } from 'firebase/firestore';
 
 interface ProtectedPageProps {
   children: React.ReactNode;
   allowedRoles: UserRole[];
 }
 
+const roleRedirects: Record<UserRole, string> = {
+  admin: '/dashboard',
+  teacher: '/students',
+  student: '/problems',
+};
+
 export default function ProtectedPage({ children, allowedRoles }: ProtectedPageProps) {
-  const { user, isLoading } = useAuth();
+  const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
   const router = useRouter();
+  const [dbUser, setDbUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (!isLoading && !user) {
+    if (isUserLoading) return;
+    if (!user) {
       router.replace('/login');
+      return;
     }
-  }, [user, isLoading, router]);
 
-  if (isLoading || !user) {
+    const fetchUserRole = async () => {
+      if (!firestore) return;
+      setIsLoading(true);
+      const userDocRef = doc(firestore, 'users', user.uid);
+      const userDoc = await getDoc(userDocRef);
+      if (userDoc.exists()) {
+        const userData = userDoc.data() as User;
+        setDbUser(userData);
+        if (!allowedRoles.includes(userData.role)) {
+          router.replace(roleRedirects[userData.role]);
+        }
+      } else {
+        router.replace('/login');
+      }
+      setIsLoading(false);
+    };
+
+    fetchUserRole();
+  }, [user, isUserLoading, router, firestore, allowedRoles]);
+
+  if (isUserLoading || isLoading || !dbUser) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
       </div>
     );
   }
-  
-  if (!allowedRoles.includes(user.role)) {
-     // Redirect to their default page
-     const roleRedirects: Record<UserRole, string> = {
-        admin: '/dashboard',
-        teacher: '/students',
-        student: '/problems',
-     };
-     router.replace(roleRedirects[user.role]);
-     return (
-        <div className="flex h-screen items-center justify-center bg-background">
-          <p>권한이 없습니다. 리디렉션 중...</p>
-          <Loader2 className="ml-2 h-6 w-6 animate-spin text-primary" />
-        </div>
-     );
+
+  if (!allowedRoles.includes(dbUser.role)) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <p>권한이 없습니다. 리디렉션 중...</p>
+        <Loader2 className="ml-2 h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
   }
 
   return <AppLayout>{children}</AppLayout>;

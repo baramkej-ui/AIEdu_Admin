@@ -1,5 +1,8 @@
 import type { User, Problem, Student, StudentProgress } from './types';
 
+// This file contains mock data. In a real application, this data would come from a database.
+// It's left here for reference or for fallback if needed.
+
 export const users: User[] = [
   { id: 'user-1', name: '앨리스 관리자', email: 'admin@edu.com', role: 'admin', avatarUrl: 'https://picsum.photos/seed/101/40/40' },
   { id: 'user-2', name: '밥 교사', email: 'teacher@edu.com', role: 'teacher', avatarUrl: 'https://picsum.photos/seed/102/40/40' },
@@ -43,9 +46,9 @@ export const problems: Problem[] = [
 ];
 
 export const studentProgressData: StudentProgress[] = [
-    { studentId: 'user-3', problemId: 'prob-1', solved: true, correct: true, timeTaken: 30 },
-    { studentId: 'user-3', problemId: 'prob-2', solved: true, correct: false, timeTaken: 45 },
-    { studentId: 'user-4', problemId: 'prob-1', solved: true, correct: true, timeTaken: 25 },
+    { id: 'progress-1', studentId: 'user-3', problemId: 'prob-1', solved: true, correct: true, timeTaken: 30 },
+    { id: 'progress-2', studentId: 'user-3', problemId: 'prob-2', solved: true, correct: false, timeTaken: 45 },
+    { id: 'progress-3', studentId: 'user-4', problemId: 'prob-1', solved: true, correct: true, timeTaken: 25 },
 ];
 
 

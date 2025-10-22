@@ -17,14 +17,45 @@ import {
 import { Badge } from "@/components/ui/badge";
 import ProtectedPage from "@/components/protected-page";
 import { PageHeader } from "@/components/page-header";
-import { students, problems } from "@/lib/data";
 import { notFound } from "next/navigation";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CheckCircle2, XCircle, Clock, Percent, Target } from "lucide-react";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { useFirestore, useDoc, useCollection, useMemoFirebase } from "@/firebase";
+import { collection, doc, query, where } from "firebase/firestore";
+import type { User, Problem, StudentProgress } from "@/lib/types";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Loader2 } from "lucide-react";
+
 
 export default function StudentDetailPage({ params }: { params: { id: string } }) {
-  const student = students.find((s) => s.id === params.id);
+  const firestore = useFirestore();
+
+  const studentDocRef = useMemoFirebase(() => 
+    firestore ? doc(firestore, 'users', params.id) : null, 
+  [firestore, params.id]);
+  const { data: student, isLoading: studentLoading } = useDoc<User>(studentDocRef);
+
+  const progressQuery = useMemoFirebase(() => 
+    firestore ? query(collection(firestore, 'studentProgress'), where('studentId', '==', params.id)) : null,
+  [firestore, params.id]);
+  const { data: studentProgress, isLoading: progressLoading } = useCollection<StudentProgress>(progressQuery);
+
+  const problemsQuery = useMemoFirebase(() =>
+    firestore ? collection(firestore, 'problems') : null,
+  [firestore]);
+  const { data: problems, isLoading: problemsLoading } = useCollection<Problem>(problemsQuery);
+
+  const isLoading = studentLoading || progressLoading || problemsLoading;
+
+  if (isLoading) {
+      return (
+          <ProtectedPage allowedRoles={["admin", "teacher"]}>
+              <div className="flex h-full w-full items-center justify-center">
+                  <Loader2 className="h-12 w-12 animate-spin text-primary" />
+              </div>
+          </ProtectedPage>
+      );
+  }
 
   if (!student) {
     notFound();
@@ -34,10 +65,13 @@ export default function StudentDetailPage({ params }: { params: { id: string } }
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
   }
 
-  const solvedCount = student.progress.filter(p => p.solved).length;
-  const correctCount = student.progress.filter(p => p.correct).length;
+  const progressData = studentProgress || [];
+  const allProblems = problems || [];
+
+  const solvedCount = progressData.filter(p => p.solved).length;
+  const correctCount = progressData.filter(p => p.correct).length;
   const accuracy = solvedCount > 0 ? (correctCount / solvedCount) * 100 : 0;
-  const totalTime = student.progress.reduce((acc, p) => acc + p.timeTaken, 0);
+  const totalTime = progressData.reduce((acc, p) => acc + p.timeTaken, 0);
   const avgTime = solvedCount > 0 ? totalTime / solvedCount : 0;
 
   const pieData = [
@@ -71,7 +105,7 @@ export default function StudentDetailPage({ params }: { params: { id: string } }
             <Target className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{solvedCount} / {problems.length}</div>
+            <div className="text-2xl font-bold">{solvedCount} / {allProblems.length}</div>
             <p className="text-xs text-muted-foreground">
               전체 문제 중 해결한 문제
             </p>
@@ -133,11 +167,11 @@ export default function StudentDetailPage({ params }: { params: { id: string } }
               </TableRow>
             </TableHeader>
             <TableBody>
-              {student.progress.map((p) => {
-                const problem = problems.find(pr => pr.id === p.problemId);
+              {progressData.map((p) => {
+                const problem = allProblems.find(pr => pr.id === p.problemId);
                 return (
-                  <TableRow key={p.problemId}>
-                    <TableCell className="font-medium">{problem?.question}</TableCell>
+                  <TableRow key={p.id}>
+                    <TableCell className="font-medium">{problem?.question || '삭제된 문제'}</TableCell>
                     <TableCell>
                       {p.correct ? (
                         <CheckCircle2 className="h-5 w-5 text-green-500" />
@@ -147,9 +181,9 @@ export default function StudentDetailPage({ params }: { params: { id: string } }
                     </TableCell>
                     <TableCell>{p.timeTaken}</TableCell>
                     <TableCell>
-                        <Badge variant={problem?.difficulty === 'hard' ? 'destructive' : problem?.difficulty === 'medium' ? 'secondary' : 'default'}>
-                            {problem?.difficulty}
-                        </Badge>
+                        {problem ? <Badge variant={problem.difficulty === 'hard' ? 'destructive' : problem.difficulty === 'medium' ? 'secondary' : 'default'}>
+                            {problem.difficulty}
+                        </Badge> : '-'}
                     </TableCell>
                   </TableRow>
                 );

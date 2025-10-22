@@ -46,7 +46,7 @@ const problemSchema = z.object({
 
 interface ProblemFormProps {
   problem?: Problem;
-  onSave: (data: Problem) => Promise<void>;
+  onSave: (data: Omit<Problem, 'id'>, id?: string) => Promise<void>;
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
 }
@@ -58,7 +58,7 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
   const form = useForm<z.infer<typeof problemSchema>>({
     resolver: zodResolver(problemSchema),
     defaultValues: problem
-      ? { ...problem, answer: problem.answer }
+      ? { ...problem }
       : {
           question: '',
           options: ['', ''],
@@ -81,16 +81,12 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
       difficulty: 'easy',
       topic: '',
     });
-  }, [problem, form]);
+  }, [problem, form, isOpen]);
 
   async function onSubmit(values: z.infer<typeof problemSchema>) {
     setIsLoading(true);
     try {
-      const problemData: Problem = {
-        id: problem?.id || `prob-${Date.now()}`,
-        ...values,
-      };
-      await onSave(problemData);
+      await onSave(values, problem?.id);
       setIsOpen(false);
     } catch (error) {
       toast({

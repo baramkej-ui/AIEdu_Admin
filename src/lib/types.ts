@@ -18,6 +18,7 @@ export type Problem = {
 };
 
 export type StudentProgress = {
+  id: string;
   studentId: string;
   problemId: string;
   solved: boolean;

@@ -8,7 +8,11 @@
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the User entity."
+          "description": "Unique identifier for the User entity. Matches Firebase Auth UID."
+        },
+        "name": {
+          "type": "string",
+          "description": "User's display name."
         },
         "email": {
           "type": "string",
@@ -17,11 +21,18 @@
         },
         "role": {
           "type": "string",
-          "description": "Role of the user (admin, teacher, student)."
+          "description": "Role of the user (admin, teacher, student).",
+          "enum": ["admin", "teacher", "student"]
+        },
+        "avatarUrl": {
+          "type": "string",
+          "description": "URL for the user's avatar image.",
+          "format": "uri"
         }
       },
       "required": [
         "id",
+        "name",
         "email",
         "role"
       ]
@@ -53,11 +64,12 @@
         },
         "difficulty": {
           "type": "string",
-          "description": "The difficulty level of the question."
+          "description": "The difficulty level of the question.",
+          "enum": ["easy", "medium", "hard"]
         },
-        "teacherId": {
-          "type": "string",
-          "description": "Reference to User (Teacher) who created the problem. (Relationship: Teacher 1:N Problem)"
+        "topic": {
+            "type": "string",
+            "description": "The topic of the question."
         }
       },
       "required": [
@@ -66,7 +78,7 @@
         "options",
         "answer",
         "difficulty",
-        "teacherId"
+        "topic"
       ]
     },
     "StudentProgress": {
@@ -77,7 +89,7 @@
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the StudentProgress entity."
+          "description": "Unique identifier for the StudentProgress entity. Typically a composite of studentId and problemId."
         },
         "studentId": {
           "type": "string",
@@ -112,8 +124,7 @@
   },
   "auth": {
     "providers": [
-      "password",
-      "anonymous"
+      "password"
     ]
   },
   "firestore": {
@@ -125,28 +136,24 @@
           "schema": {
             "$ref": "#/backend/entities/User"
           },
-          "description": "Stores user information. Uses path-based ownership for private user data. Includes the 'role' field to determine authorization.",
+          "description": "Stores public user profile information. The document ID is the same as the Firebase Auth UID.",
           "params": [
             {
               "name": "userId",
-              "description": "The unique identifier for the user."
+              "description": "The unique identifier for the user, matching their Firebase Auth UID."
             }
           ]
         }
       },
       {
-        "path": "/users/{teacherId}/problems/{problemId}",
+        "path": "/problems/{problemId}",
         "definition": {
           "entityName": "Problem",
           "schema": {
             "$ref": "#/backend/entities/Problem"
           },
-          "description": "Stores problems created by teachers. Uses path-based ownership for teachers to manage their problems. This structure allows secure listing of problems created by a specific teacher (QAPs).",
+          "description": "Stores all quiz problems. Accessible to all authenticated users for reading. Only writable by admin or teacher roles.",
           "params": [
-            {
-              "name": "teacherId",
-              "description": "The unique identifier for the teacher who created the problem."
-            },
             {
               "name": "problemId",
               "description": "The unique identifier for the problem."
@@ -155,26 +162,22 @@
         }
       },
       {
-        "path": "/users/{studentId}/studentProgress/{studentProgressId}",
+        "path": "/studentProgress/{studentProgressId}",
         "definition": {
           "entityName": "StudentProgress",
           "schema": {
             "$ref": "#/backend/entities/StudentProgress"
           },
-          "description": "Stores the progress of students on specific problems.  Uses path-based ownership to ensure students can only access their own progress data. This structure allows secure listing of a specific students progress (QAPs).",
+          "description": "Stores the progress of students on specific problems. A student can only write to their own progress records.",
           "params": [
             {
-              "name": "studentId",
-              "description": "The unique identifier for the student whose progress is being tracked."
-            },
-            {
               "name": "studentProgressId",
-              "description": "The unique identifier for the student progress entry."
+              "description": "The unique identifier for the student progress entry, typically a composite ID like {studentId}-{problemId}."
             }
           ]
         }
       }
     ],
-    "reasoning": "The Firestore structure is designed to accommodate the EduQuiz platform's user management, problem creation, and student progress tracking features, while prioritizing security and scalability. It leverages path-based ownership for private user data, and segregates data based on access requirements to guarantee rules are not filters (QAPs). The design implements Authorization Independence by avoiding `get()` calls in rules. The database will have the following collections. `users` collection is present, and the `Problem` and `StudentProgress` are stored under users collection, thus enforcing the User 1:N relationship. The user 'role' is stored in each user document to avoid custom claims (DBAC)."
+    "reasoning": "The Firestore structure is simplified for this educational quiz app. All users are in a single 'users' collection, and all problems in a 'problems' collection. This makes querying for data straightforward. Student progress is stored in its own collection with rules to ensure students can only write to their own records. Security is managed through Firestore rules based on the 'role' field in the user's document."
   }
 }

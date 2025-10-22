@@ -1,15 +1,26 @@
 'use client';
 import ProtectedPage from "@/components/protected-page";
-import { useAuth } from "@/hooks/use-auth";
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { ProblemList } from "@/components/problem-list";
 import { ProblemSolver } from "@/components/problem-solver";
 import { Loader2 } from "lucide-react";
+import { doc } from 'firebase/firestore';
+import type { User as DbUser } from '@/lib/types';
+
 
 export default function ProblemsPage() {
-  const { user, isLoading } = useAuth();
+  const { user: authUser, isUserLoading } = useUser();
+  const firestore = useFirestore();
+  
+  const userDocRef = useMemoFirebase(() => {
+    if (!firestore || !authUser) return null;
+    return doc(firestore, 'users', authUser.uid);
+  }, [firestore, authUser]);
+
+  const { data: dbUser, isLoading: isDbUserLoading } = useDoc<DbUser>(userDocRef);
 
   const renderContent = () => {
-    if (isLoading) {
+    if (isUserLoading || isDbUserLoading) {
       return (
         <div className="flex h-full w-full items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin" />
@@ -17,15 +28,15 @@ export default function ProblemsPage() {
       );
     }
 
-    if (!user) {
+    if (!dbUser) {
       return null; // ProtectedPage will handle redirect
     }
 
-    if (user.role === 'admin' || user.role === 'teacher') {
+    if (dbUser.role === 'admin' || dbUser.role === 'teacher') {
       return <ProblemList />;
     }
     
-    if (user.role === 'student') {
+    if (dbUser.role === 'student') {
       return <ProblemSolver />;
     }
     

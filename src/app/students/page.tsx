@@ -18,13 +18,23 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import ProtectedPage from "@/components/protected-page";
 import { PageHeader } from "@/components/page-header";
-import { students } from "@/lib/data";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Loader2 } from "lucide-react";
+import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { collection, query, where } from "firebase/firestore";
+import type { User } from "@/lib/types";
 
 export default function StudentsPage() {
+  const firestore = useFirestore();
+
+  const studentsQuery = useMemoFirebase(() => 
+    firestore ? query(collection(firestore, 'users'), where('role', '==', 'student')) : null
+  , [firestore]);
+
+  const { data: students, isLoading } = useCollection<User>(studentsQuery);
+
   const getInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase();
+    return name?.split(' ').map(n => n[0]).join('').toUpperCase() || '';
   }
 
   return (
@@ -36,41 +46,47 @@ export default function StudentsPage() {
       <Card>
         <CardHeader>
           <CardTitle>학생 목록</CardTitle>
-          <CardDescription>총 {students.length}명의 학생이 있습니다.</CardDescription>
+          <CardDescription>총 {students?.length ?? 0}명의 학생이 있습니다.</CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>이름</TableHead>
-                <TableHead className="hidden md:table-cell">이메일</TableHead>
-                <TableHead className="text-right">진행 상황 보기</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {students.map((student) => (
-                <TableRow key={student.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <Avatar>
-                        <AvatarImage src={student.avatarUrl} alt={student.name} />
-                        <AvatarFallback>{getInitials(student.name)}</AvatarFallback>
-                      </Avatar>
-                      <span className="font-medium">{student.name}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell">{student.email}</TableCell>
-                  <TableCell className="text-right">
-                    <Button asChild variant="ghost" size="sm">
-                      <Link href={`/students/${student.id}`}>
-                        상세보기 <ArrowRight className="ml-2 h-4 w-4" />
-                      </Link>
-                    </Button>
-                  </TableCell>
+          {isLoading ? (
+            <div className="flex justify-center items-center h-40">
+              <Loader2 className="h-8 w-8 animate-spin" />
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>이름</TableHead>
+                  <TableHead className="hidden md:table-cell">이메일</TableHead>
+                  <TableHead className="text-right">진행 상황 보기</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {students?.map((student) => (
+                  <TableRow key={student.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <Avatar>
+                          <AvatarImage src={student.avatarUrl} alt={student.name} />
+                          <AvatarFallback>{getInitials(student.name)}</AvatarFallback>
+                        </Avatar>
+                        <span className="font-medium">{student.name}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">{student.email}</TableCell>
+                    <TableCell className="text-right">
+                      <Button asChild variant="ghost" size="sm">
+                        <Link href={`/students/${student.id}`}>
+                          상세보기 <ArrowRight className="ml-2 h-4 w-4" />
+                        </Link>
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
     </ProtectedPage>

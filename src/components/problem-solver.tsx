@@ -13,24 +13,48 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { problems as allProblems } from "@/lib/data";
-import { CheckCircle, XCircle, ArrowRight, RotateCw } from 'lucide-react';
+import { CheckCircle, XCircle, ArrowRight, RotateCw, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { Problem } from '@/lib/types';
+import type { Problem, StudentProgress } from '@/lib/types';
+import { useFirestore, useCollection, useUser, setDocumentNonBlocking, useMemoFirebase } from '@/firebase';
+import { collection, doc } from 'firebase/firestore';
 
 export function ProblemSolver() {
-  const [problems, setProblems] = React.useState<Problem[]>(() => [...allProblems].sort(() => 0.5 - Math.random()).slice(0, 5));
+  const firestore = useFirestore();
+  const { user } = useUser();
+  const problemsCollectionRef = useMemoFirebase(() => firestore ? collection(firestore, 'problems') : null, [firestore]);
+  const { data: allProblems, isLoading } = useCollection<Problem>(problemsCollectionRef);
+
+  const [problems, setProblems] = React.useState<Problem[]>([]);
   const [currentProblemIndex, setCurrentProblemIndex] = React.useState(0);
   const [selectedAnswer, setSelectedAnswer] = React.useState<string | null>(null);
   const [isAnswered, setIsAnswered] = React.useState(false);
   const [score, setScore] = React.useState(0);
   const [isFinished, setIsFinished] = React.useState(false);
+  const [startTime, setStartTime] = React.useState(0);
 
   const { toast } = useToast();
 
+  React.useEffect(() => {
+    if (allProblems) {
+      const shuffled = [...allProblems].sort(() => 0.5 - Math.random()).slice(0, 5);
+      setProblems(shuffled);
+      setCurrentProblemIndex(0);
+      setStartTime(Date.now());
+    }
+  }, [allProblems]);
+
+  if (isLoading || problems.length === 0) {
+    return (
+      <div className="flex h-full w-full items-center justify-center">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   const currentProblem = problems[currentProblemIndex];
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (!isAnswered) {
       if (selectedAnswer === null) {
         toast({
@@ -40,12 +64,28 @@ export function ProblemSolver() {
         return;
       }
       setIsAnswered(true);
-      if (selectedAnswer === currentProblem.answer) {
+      const isCorrect = selectedAnswer === currentProblem.answer;
+      if (isCorrect) {
         setScore(prev => prev + 1);
       }
+      if (user && firestore) {
+        const timeTaken = Math.round((Date.now() - startTime) / 1000);
+        const progressId = `${user.uid}-${currentProblem.id}`;
+        const progressRef = doc(firestore, 'studentProgress', progressId);
+        const progressData: Omit<StudentProgress, 'id'> = {
+          studentId: user.uid,
+          problemId: currentProblem.id,
+          solved: true,
+          correct: isCorrect,
+          timeTaken: timeTaken,
+        };
+        setDocumentNonBlocking(progressRef, progressData, { merge: true });
+      }
+
     } else {
       setIsAnswered(false);
       setSelectedAnswer(null);
+      setStartTime(Date.now());
       if (currentProblemIndex < problems.length - 1) {
         setCurrentProblemIndex(prev => prev + 1);
       } else {
@@ -55,12 +95,16 @@ export function ProblemSolver() {
   };
 
   const handleRestart = () => {
-    setProblems([...allProblems].sort(() => 0.5 - Math.random()).slice(0, 5));
+    if (allProblems) {
+      const shuffled = [...allProblems].sort(() => 0.5 - Math.random()).slice(0, 5);
+      setProblems(shuffled);
+    }
     setCurrentProblemIndex(0);
     setSelectedAnswer(null);
     setIsAnswered(false);
     setScore(0);
     setIsFinished(false);
+    setStartTime(Date.now());
   }
 
   if (isFinished) {

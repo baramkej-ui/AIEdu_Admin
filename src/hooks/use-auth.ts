@@ -1,12 +1,4 @@
-'use client';
-
-import { useContext } from 'react';
-import { AuthContext } from '@/contexts/auth-context';
-
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth는 AuthProvider 내에서 사용해야 합니다.');
-  }
-  return context;
-}
+// This file is no longer needed and can be removed.
+// All auth logic is now handled by the Firebase context and hooks.
+// We will use useUser, useAuth, etc. from '@/firebase' directly.
+export {};

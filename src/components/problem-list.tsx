@@ -16,14 +16,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, PlusCircle, Pencil, Trash2 } from "lucide-react";
-
-import { problems as initialProblems } from "@/lib/data";
+import { MoreHorizontal, PlusCircle, Pencil, Trash2, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ProblemForm } from './problem-form';
 import type { Problem } from '@/lib/types';
 import { GenerateProblemsButton } from './generate-problems-button';
 import { PageHeader } from './page-header';
+import { useFirestore, useCollection, useMemoFirebase, setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
+import { collection, doc } from 'firebase/firestore';
 
 import {
   AlertDialog,
@@ -37,7 +37,10 @@ import {
 } from "@/components/ui/alert-dialog"
 
 export function ProblemList() {
-  const [problems, setProblems] = React.useState<Problem[]>(initialProblems);
+  const firestore = useFirestore();
+  const problemsCollectionRef = useMemoFirebase(() => firestore ? collection(firestore, 'problems') : null, [firestore]);
+  const { data: problems, isLoading } = useCollection<Problem>(problemsCollectionRef);
+
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [isAlertOpen, setIsAlertOpen] = React.useState(false);
   const [selectedProblem, setSelectedProblem] = React.useState<Problem | undefined>(undefined);
@@ -45,14 +48,14 @@ export function ProblemList() {
 
   const { toast } = useToast();
 
-  const handleSaveProblem = async (problemData: Problem) => {
-    setProblems(prev => {
-      const existing = prev.find(p => p.id === problemData.id);
-      if (existing) {
-        return prev.map(p => p.id === problemData.id ? problemData : p);
-      }
-      return [problemData, ...prev];
-    });
+  const handleSaveProblem = async (problemData: Omit<Problem, 'id'>, id?: string) => {
+    if (!firestore) return;
+    
+    const problemId = id || `prob-${Date.now()}`;
+    const docRef = doc(firestore, 'problems', problemId);
+    
+    setDocumentNonBlocking(docRef, problemData, { merge: !id });
+
     toast({
       title: "성공",
       description: "문제가 성공적으로 저장되었습니다.",
@@ -75,8 +78,9 @@ export function ProblemList() {
   }
 
   const handleDelete = () => {
-    if (problemToDelete) {
-      setProblems(prev => prev.filter(p => p.id !== problemToDelete));
+    if (problemToDelete && firestore) {
+      const docRef = doc(firestore, 'problems', problemToDelete);
+      deleteDocumentNonBlocking(docRef);
       toast({
         title: "삭제 완료",
         description: "문제가 삭제되었습니다.",
@@ -101,6 +105,11 @@ export function ProblemList() {
         </div>
       </PageHeader>
       <div className="rounded-lg border bg-card text-card-foreground shadow-sm">
+        {isLoading ? (
+            <div className="flex justify-center items-center h-64">
+                <Loader2 className="h-8 w-8 animate-spin" />
+            </div>
+        ) : (
         <Table>
           <TableHeader>
             <TableRow>
@@ -111,7 +120,7 @@ export function ProblemList() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {problems.map((problem) => (
+            {problems?.map((problem) => (
               <TableRow key={problem.id}>
                 <TableCell className="font-medium max-w-sm truncate">{problem.question}</TableCell>
                 <TableCell>{problem.topic}</TableCell>
@@ -144,6 +153,7 @@ export function ProblemList() {
             ))}
           </TableBody>
         </Table>
+        )}
       </div>
 
       <ProblemForm 

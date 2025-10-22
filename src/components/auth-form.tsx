@@ -19,7 +19,9 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth, useFirestore, setDocumentNonBlocking } from '@/firebase';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
+import { doc } from 'firebase/firestore';
 import type { UserRole } from '@/lib/types';
 import {
   Select,
@@ -32,6 +34,7 @@ import {
 const formSchema = z.object({
   name: z.string().optional(),
   email: z.string().email({ message: '유효한 이메일을 입력해주세요.' }),
+  password: z.string().min(6, '비밀번호는 6자 이상이어야 합니다.'),
   role: z.enum(['admin', 'teacher', 'student'], {
     required_error: '역할을 선택해주세요.',
   }),
@@ -49,22 +52,22 @@ const roleRedirects: Record<UserRole, string> = {
 
 export function AuthForm({ type }: AuthFormProps) {
   const router = useRouter();
-  const { login, signup } = useAuth();
+  const auth = useAuth();
+  const firestore = useFirestore();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = React.useState(false);
 
   const currentFormSchema =
     type === 'signup'
-      ? formSchema.extend({
-          name: z.string().min(2, { message: '이름은 2자 이상이어야 합니다.' }),
-        })
-      : formSchema;
+      ? formSchema
+      : formSchema.omit({ name: true });
 
   const form = useForm<z.infer<typeof currentFormSchema>>({
     resolver: zodResolver(currentFormSchema),
     defaultValues: {
-      name: '',
       email: '',
+      password: '',
+      role: 'student',
     },
   });
 
@@ -72,19 +75,48 @@ export function AuthForm({ type }: AuthFormProps) {
     setIsLoading(true);
     try {
       if (type === 'login') {
-        await login(values.email, values.role);
+        const { email, password } = values;
+        await signInWithEmailAndPassword(auth, email, password);
         toast({ title: "로그인 성공", description: "대시보드로 이동합니다." });
         router.push(roleRedirects[values.role]);
-      } else {
-        await signup(values.name!, values.email, values.role);
+
+      } else if (type === 'signup') {
+        const { name, email, password, role } = values as z.infer<typeof formSchema>;
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+        
+        if (user && firestore) {
+           const userDocRef = doc(firestore, "users", user.uid);
+           const userData = {
+                id: user.uid,
+                name: name,
+                email: email,
+                role: role,
+                avatarUrl: `https://picsum.photos/seed/${user.uid}/40/40`
+            };
+           setDocumentNonBlocking(userDocRef, userData, { merge: true });
+        }
+        
         toast({ title: "가입 성공", description: "환영합니다! 대시보드로 이동합니다." });
-        router.push(roleRedirects[values.role]);
+        router.push(roleRedirects[role]);
       }
-    } catch (error) {
+    } catch (error: any) {
+      console.error(error);
+      const errorCode = error.code;
+      let errorMessage = "오류가 발생했습니다.";
+      if (errorCode === 'auth/user-not-found' || errorCode === 'auth/wrong-password') {
+        errorMessage = '이메일 또는 비밀번호가 잘못되었습니다.';
+      } else if (errorCode === 'auth/email-already-in-use') {
+        errorMessage = '이미 사용 중인 이메일입니다.';
+      } else if (errorCode === 'auth/invalid-email') {
+        errorMessage = '유효하지 않은 이메일 주소입니다.';
+      } else if (errorCode === 'auth/weak-password') {
+        errorMessage = '비밀번호는 6자 이상이어야 합니다.';
+      }
       toast({
         variant: 'destructive',
-        title: '오류 발생',
-        description: (error as Error).message,
+        title: '인증 실패',
+        description: errorMessage,
       });
     } finally {
       setIsLoading(false);
@@ -117,6 +149,19 @@ export function AuthForm({ type }: AuthFormProps) {
               <FormLabel>이메일</FormLabel>
               <FormControl>
                 <Input placeholder="name@example.com" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="password"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>비밀번호</FormLabel>
+              <FormControl>
+                <Input type="password" placeholder="••••••••" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>

@@ -18,7 +18,10 @@ import {
   ChartLegendContent,
 } from "@/components/ui/chart";
 import { Bar, XAxis, YAxis, CartesianGrid, BarChart as RechartsBarChart } from "recharts";
-import { users, problems } from "@/lib/data";
+import { useCollection, useFirestore } from "@/firebase";
+import { collection, query } from "firebase/firestore";
+import type { User, Problem } from "@/lib/types";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const chartData = [
   { month: "1월", users: 186 },
@@ -38,10 +41,20 @@ const chartConfig = {
 
 
 export default function DashboardPage() {
-  const totalUsers = users.length;
-  const totalProblems = problems.length;
-  const totalTeachers = users.filter(u => u.role === 'teacher').length;
-  const totalStudents = users.filter(u => u.role === 'student').length;
+  const firestore = useFirestore();
+
+  const usersQuery = firestore ? query(collection(firestore, 'users')) : null;
+  const { data: usersData, isLoading: usersLoading } = useCollection<User>(usersQuery);
+  
+  const problemsQuery = firestore ? query(collection(firestore, 'problems')) : null;
+  const { data: problemsData, isLoading: problemsLoading } = useCollection<Problem>(problemsQuery);
+
+  const isLoading = usersLoading || problemsLoading;
+
+  const totalUsers = usersData?.length ?? 0;
+  const totalProblems = problemsData?.length ?? 0;
+  const totalTeachers = usersData?.filter(u => u.role === 'teacher').length ?? 0;
+  const totalStudents = usersData?.filter(u => u.role === 'student').length ?? 0;
 
   return (
     <ProtectedPage allowedRoles={["admin"]}>
@@ -56,7 +69,7 @@ export default function DashboardPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalUsers}</div>
+            {isLoading ? <Skeleton className="h-8 w-16"/> : <div className="text-2xl font-bold">{totalUsers}</div>}
             <p className="text-xs text-muted-foreground">
               플랫폼의 모든 역할 포함
             </p>
@@ -68,7 +81,7 @@ export default function DashboardPage() {
             <BookOpen className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalProblems}</div>
+            {isLoading ? <Skeleton className="h-8 w-16"/> : <div className="text-2xl font-bold">{totalProblems}</div>}
             <p className="text-xs text-muted-foreground">
               생성된 모든 문제
             </p>
@@ -80,7 +93,7 @@ export default function DashboardPage() {
             <UserCheck className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalTeachers}</div>
+            {isLoading ? <Skeleton className="h-8 w-16"/> : <div className="text-2xl font-bold">{totalTeachers}</div>}
             <p className="text-xs text-muted-foreground">
               활성 교사 계정
             </p>
@@ -92,7 +105,7 @@ export default function DashboardPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalStudents}</div>
+            {isLoading ? <Skeleton className="h-8 w-16"/> : <div className="text-2xl font-bold">{totalStudents}</div>}
             <p className="text-xs text-muted-foreground">
               활성 학생 계정
             </p>
@@ -107,6 +120,7 @@ export default function DashboardPage() {
                 <CardDescription>지난 6개월간의 신규 사용자 가입 현황입니다.</CardDescription>
             </CardHeader>
             <CardContent>
+              {isLoading ? <Skeleton className="h-[300px] w-full" /> : (
                 <ChartContainer config={chartConfig} className="h-[300px] w-full">
                     <RechartsBarChart accessibilityLayer data={chartData}>
                         <CartesianGrid vertical={false} />
@@ -122,6 +136,7 @@ export default function DashboardPage() {
                         <Bar dataKey="users" fill="var(--color-users)" radius={4} />
                     </RechartsBarChart>
                 </ChartContainer>
+              )}
             </CardContent>
         </Card>
       </div>
