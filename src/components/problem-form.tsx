@@ -35,14 +35,19 @@ import {
   DialogFooter,
   DialogClose,
 } from '@/components/ui/dialog';
+import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 
 const problemSchema = z.object({
   question: z.string().min(10, '질문은 10자 이상이어야 합니다.'),
-  options: z.array(z.string().min(1, '옵션은 비워둘 수 없습니다.')).min(2, '최소 2개의 옵션이 필요합니다.'),
-  answer: z.string().min(1, '정답을 선택해주세요.'),
-  difficulty: z.enum(['easy', 'medium', 'hard']),
-  topic: z.string().min(2, '주제는 2자 이상이어야 합니다.'),
+  question2: z.string().optional(),
+  type: z.enum(['multiple-choice', 'subjective']).default('multiple-choice'),
+  // Fields to be added back later based on type
+  options: z.array(z.string()).optional(),
+  answer: z.string().optional(),
+  difficulty: z.enum(['easy', 'medium', 'hard']).optional(),
+  topic: z.string().optional(),
 });
+
 
 interface ProblemFormProps {
   problem?: Problem;
@@ -55,38 +60,38 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
   const { toast } = useToast();
   const [isLoading, setIsLoading] = React.useState(false);
 
-  const form = useForm<z.infer<typeof problemSchema>>({
-    resolver: zodResolver(problemSchema),
+  // A simplified schema for now
+  const form = useForm({
+    // resolver: zodResolver(problemSchema),
     defaultValues: problem
       ? { ...problem }
       : {
           question: '',
-          options: ['', ''],
-          answer: '',
-          difficulty: 'easy',
-          topic: '',
+          question2: '',
+          type: 'multiple-choice',
         },
   });
 
-  const { fields, append, remove } = useFieldArray({
-    control: form.control,
-    name: 'options',
-  });
 
   React.useEffect(() => {
     form.reset(problem || {
       question: '',
-      options: ['', ''],
-      answer: '',
-      difficulty: 'easy',
-      topic: '',
+      question2: '',
+      type: 'multiple-choice',
     });
   }, [problem, form, isOpen]);
 
-  async function onSubmit(values: z.infer<typeof problemSchema>) {
+  async function onSubmit(values: any) { // z.infer<typeof problemSchema>
     setIsLoading(true);
     try {
-      await onSave(values, problem?.id);
+      // This will be expanded later
+      const saveData = {
+        ...values,
+        number: problem?.number || Date.now(),
+        difficulty: values.difficulty || 'easy',
+        topic: values.topic || '일반',
+      }
+      await onSave(saveData, problem?.id);
       setIsOpen(false);
     } catch (error) {
       toast({
@@ -117,7 +122,7 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
                 <FormItem>
                   <FormLabel>질문</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="예: React의 가상 DOM이란 무엇인가요?" {...field} />
+                    <Textarea placeholder="" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -125,105 +130,53 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
             />
              <FormField
               control={form.control}
-              name="topic"
+              name="question2"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>주제</FormLabel>
+                  <FormLabel>문제2(설명) (option)</FormLabel>
                   <FormControl>
-                    <Input placeholder="예: React Hooks" {...field} />
+                    <Textarea placeholder="" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <div>
-              <FormLabel>옵션</FormLabel>
-              <div className="space-y-2 pt-2">
-                {fields.map((field, index) => (
-                  <FormField
-                    key={field.id}
-                    control={form.control}
-                    name={`options.${index}`}
-                    render={({ field }) => (
-                      <FormItem>
-                        <div className="flex items-center gap-2">
-                          <FormControl>
-                            <Input {...field} placeholder={`옵션 ${index + 1}`} />
-                          </FormControl>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => remove(index)}
-                            disabled={fields.length <= 2}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                ))}
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="mt-2"
-                onClick={() => append('')}
-              >
-                <PlusCircle className="mr-2 h-4 w-4" />
-                옵션 추가
-              </Button>
-            </div>
             
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="answer"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>정답</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="정답 선택..." />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {form.watch('options').map((option, index) => (
-                          option && <SelectItem key={index} value={option}>{option}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="difficulty"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>난이도</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="난이도 선택..." />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="easy">쉬움</SelectItem>
-                        <SelectItem value="medium">중간</SelectItem>
-                        <SelectItem value="hard">어려움</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="type"
+              render={({ field }) => (
+                <FormItem className="space-y-3">
+                  <FormLabel>문제 유형</FormLabel>
+                  <FormControl>
+                    <RadioGroup
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                      className="flex space-x-4"
+                    >
+                      <FormItem className="flex items-center space-x-2 space-y-0">
+                        <FormControl>
+                          <RadioGroupItem value="multiple-choice" />
+                        </FormControl>
+                        <FormLabel className="font-normal">
+                          객관식
+                        </FormLabel>
+                      </FormItem>
+                      <FormItem className="flex items-center space-x-2 space-y-0">
+                        <FormControl>
+                          <RadioGroupItem value="subjective" />
+                        </FormControl>
+                        <FormLabel className="font-normal">
+                          주관식
+                        </FormLabel>
+                      </FormItem>
+                    </RadioGroup>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
           </form>
         </Form>
         <DialogFooter className="pt-4">
