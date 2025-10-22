@@ -44,7 +44,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             {isCollapsed ? <PanelRight /> : <PanelLeft />}
             <span className="sr-only">Toggle Sidebar</span>
           </Button>
-          <UserNav />
+          <div className="flex items-center gap-4">
+            <UserNav />
+          </div>
         </header>
         <main className="flex-1 p-6">{children}</main>
       </div>
