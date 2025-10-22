@@ -16,6 +16,7 @@ import { doc } from "firebase/firestore";
 import type { LevelTest } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 
 const TEST_ID = 'reading';
 
@@ -92,6 +93,14 @@ export default function ReadingTestPage() {
             ) : (
                 <div className="flex items-center space-x-2">
                     <Label htmlFor="time" className="flex-shrink-0">전체 시간(분)</Label>
+                    <Input
+                        id="time"
+                        type="text"
+                        value={inputValue}
+                        onChange={(e) => setInputValue(e.target.value)}
+                        className="w-full"
+                        placeholder="10-100자 사이로 입력"
+                    />
                     <Button onClick={handleSave} disabled={isSaving}>
                         {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         저장
