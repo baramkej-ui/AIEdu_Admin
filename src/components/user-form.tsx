@@ -160,6 +160,7 @@ export function UserForm({ user, onSave, isOpen, setIsOpen, defaultRole }: UserF
                 </FormItem>
               )}
             />
+            
             {isEditing ? (
               <FormField
                   control={form.control}
