@@ -21,8 +21,8 @@ import ProtectedPage from "@/components/protected-page";
 import { PageHeader } from "@/components/page-header";
 import Link from "next/link";
 import { ArrowRight, Loader2, PlusCircle, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
-import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
-import { collection, query, where } from "firebase/firestore";
+import { useFirestore, useCollection, useMemoFirebase, useUser, setDocumentNonBlocking } from "@/firebase";
+import { collection, query, where, doc } from "firebase/firestore";
 import type { User } from "@/lib/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -41,14 +41,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { UserForm } from "@/components/user-form";
+import { useToast } from '@/hooks/use-toast';
 
 type Role = "admin" | "teacher" | "student";
 
 export default function StudentsPage() {
   const firestore = useFirestore();
   const { user: authUser } = useUser();
+  const { toast } = useToast();
 
-  // Queries for each role
   const adminsQuery = useMemoFirebase(() => 
     firestore ? query(collection(firestore, 'users'), where('role', '==', 'admin')) : null
   , [firestore]);
@@ -65,12 +67,44 @@ export default function StudentsPage() {
   const { data: students, isLoading: studentsLoading } = useCollection<User>(studentsQuery);
   
   const [isAlertOpen, setIsAlertOpen] = React.useState(false);
+  const [isFormOpen, setIsFormOpen] = React.useState(false);
+  const [userToEdit, setUserToEdit] = React.useState<User | undefined>(undefined);
   const [userToDelete, setUserToDelete] = React.useState<User | null>(null);
 
   const isLoading = adminsLoading || teachersLoading || studentsLoading;
 
   const getInitials = (name: string) => {
     return name?.split(' ').map(n => n[0]).join('').toUpperCase() || '';
+  }
+
+  const handleAddUser = () => {
+    setUserToEdit(undefined);
+    setIsFormOpen(true);
+  }
+
+  const handleEditUser = (user: User) => {
+    setUserToEdit(user);
+    setIsFormOpen(true);
+  }
+  
+  const handleSaveUser = async (userData: Omit<User, 'id'>, id?: string) => {
+    if (!firestore) return;
+    
+    // In a real app, you would handle user creation/update in Firebase Auth and Firestore.
+    // For this prototype, we'll just update/create in Firestore.
+    const userId = id || userData.id; // This is a simplified approach
+    if (!userId) {
+        toast({ variant: 'destructive', title: "오류", description: "사용자 ID가 없습니다." });
+        return;
+    }
+    
+    const userDocRef = doc(firestore, 'users', userId);
+    await setDocumentNonBlocking(userDocRef, { ...userData, id: userId }, { merge: true });
+
+    toast({
+        title: "성공",
+        description: "사용자 정보가 성공적으로 저장되었습니다."
+    });
   }
 
   const openDeleteDialog = (user: User) => {
@@ -107,7 +141,7 @@ export default function StudentsPage() {
                 <CardTitle>{roleLabels[role]} 목록</CardTitle>
                 <CardDescription>총 {users?.length ?? 0}명의 {roleLabels[role]}가 있습니다.</CardDescription>
             </div>
-            {authUser?.uid && <Button><PlusCircle className="mr-2"/>{roleLabels[role]} 추가</Button>}
+            {authUser?.uid && <Button onClick={handleAddUser}><PlusCircle className="mr-2"/>{roleLabels[role]} 추가</Button>}
         </div>
       </CardHeader>
       <CardContent>
@@ -153,7 +187,7 @@ export default function StudentsPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleEditUser(user)}>
                             <Pencil className="mr-2 h-4 w-4" />
                             수정
                           </DropdownMenuItem>
@@ -180,22 +214,29 @@ export default function StudentsPage() {
         title="구성원 관리"
         description="역할별 사용자 목록을 보고 관리하세요."
       />
-      <Tabs defaultValue="student">
+      <Tabs defaultValue="admin">
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="student">학생</TabsTrigger>
-          <TabsTrigger value="teacher">교사</TabsTrigger>
           <TabsTrigger value="admin">관리자</TabsTrigger>
+          <TabsTrigger value="teacher">교사</TabsTrigger>
+          <TabsTrigger value="student">학생</TabsTrigger>
         </TabsList>
-        <TabsContent value="student" className="mt-4">
-          <UserTable users={students} role="student" isLoading={studentsLoading} />
+        <TabsContent value="admin" className="mt-4">
+          <UserTable users={admins} role="admin" isLoading={adminsLoading} />
         </TabsContent>
         <TabsContent value="teacher" className="mt-4">
           <UserTable users={teachers} role="teacher" isLoading={teachersLoading} />
         </TabsContent>
-        <TabsContent value="admin" className="mt-4">
-          <UserTable users={admins} role="admin" isLoading={adminsLoading} />
+        <TabsContent value="student" className="mt-4">
+          <UserTable users={students} role="student" isLoading={studentsLoading} />
         </TabsContent>
       </Tabs>
+      
+      <UserForm
+        isOpen={isFormOpen}
+        setIsOpen={setIsFormOpen}
+        user={userToEdit}
+        onSave={handleSaveUser}
+      />
 
       <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
         <AlertDialogContent>
