@@ -19,34 +19,19 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth, useFirestore, setDocumentNonBlocking } from '@/firebase';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
+import { useAuth, useFirestore } from '@/firebase';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import type { UserRole, User } from '@/lib/types';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 
-const baseFormSchema = z.object({
+const formSchema = z.object({
   email: z.string().min(1, '이메일을 입력해주세요.').email({ message: '유효한 이메일을 입력해주세요.' }),
   password: z.string().min(1, '비밀번호를 입력해주세요.'),
 });
 
-const signupFormSchema = baseFormSchema.extend({
-  name: z.string().min(1, '이름을 입력해주세요.'),
-  password: z.string().min(6, '비밀번호는 6자 이상이어야 합니다.'),
-  role: z.enum(['admin', 'teacher', 'student'], {
-    required_error: '역할을 선택해주세요.',
-  }),
-});
-
 
 interface AuthFormProps {
-  type: 'login' | 'signup';
+  type: 'login';
 }
 
 const roleRedirects: Record<UserRole, string> = {
@@ -62,18 +47,15 @@ export function AuthForm({ type }: AuthFormProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = React.useState(false);
 
-  const currentFormSchema = type === 'signup' ? signupFormSchema : baseFormSchema;
-
-  const form = useForm<z.infer<typeof currentFormSchema>>({
-    resolver: zodResolver(currentFormSchema),
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
     defaultValues: {
       email: '',
       password: '',
-      ...(type === 'signup' ? { name: '', role: 'student' } : {}),
     },
   });
 
-  async function onSubmit(values: z.infer<typeof currentFormSchema>) {
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     if (!auth || !firestore) {
         toast({
@@ -85,94 +67,39 @@ export function AuthForm({ type }: AuthFormProps) {
         return;
     }
     
-    if (type === 'login') {
-      const { email, password } = values;
-      try {
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
+    const { email, password } = values;
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
 
-        const userDocRef = doc(firestore, 'users', user.uid);
-        const userDoc = await getDoc(userDocRef);
-        if (userDoc.exists()) {
-            const userData = userDoc.data() as User;
-            toast({ title: "로그인 성공", description: "대시보드로 이동합니다." });
-            router.push(roleRedirects[userData.role]);
-        } else {
-            throw new Error("사용자 역할 정보를 찾을 수 없습니다.");
+      const userDocRef = doc(firestore, 'users', user.uid);
+      const userDoc = await getDoc(userDocRef);
+      if (userDoc.exists()) {
+          const userData = userDoc.data() as User;
+          toast({ title: "로그인 성공", description: "대시보드로 이동합니다." });
+          router.push(roleRedirects[userData.role]);
+      } else {
+          throw new Error("사용자 역할 정보를 찾을 수 없습니다.");
+      }
+    } catch (error: any) {
+        const errorCode = error.code;
+        let errorMessage = "오류가 발생했습니다.";
+        if (errorCode === 'auth/user-not-found' || errorCode === 'auth/wrong-password' || errorCode === 'auth/invalid-credential') {
+          errorMessage = '이메일 또는 비밀번호가 잘못되었습니다.';
         }
-      } catch (error: any) {
-          const errorCode = error.code;
-          let errorMessage = "오류가 발생했습니다.";
-          if (errorCode === 'auth/user-not-found' || errorCode === 'auth/wrong-password' || errorCode === 'auth/invalid-credential') {
-            errorMessage = '이메일 또는 비밀번호가 잘못되었습니다.';
-          }
-          toast({
-            variant: 'destructive',
-            title: '인증 실패',
-            description: errorMessage,
-          });
-      } finally {
-        setIsLoading(false);
-      }
-    } else if (type === 'signup') {
-      const { name, email, password, role } = values as z.infer<typeof signupFormSchema>;
-      try {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
-        
-        const userDocRef = doc(firestore, "users", user.uid);
-        const userData = {
-            id: user.uid,
-            name: name,
-            email: email,
-            role: role,
-            avatarUrl: `https://picsum.photos/seed/${user.uid}/40/40`
-        };
-        await setDocumentNonBlocking(userDocRef, userData, { merge: true });
-        
-        toast({ title: "가입 성공", description: "환영합니다! 대시보드로 이동합니다." });
-        router.push(roleRedirects[role]);
-      } catch (error: any) {
-          const errorCode = error.code;
-          let errorMessage = "오류가 발생했습니다.";
-          if (errorCode === 'auth/email-already-in-use') {
-            errorMessage = '이미 사용 중인 이메일입니다.';
-          } else if (errorCode === 'auth/invalid-email') {
-            errorMessage = '유효하지 않은 이메일 주소입니다.';
-          } else if (errorCode === 'auth/weak-password') {
-            errorMessage = '비밀번호는 6자 이상이어야 합니다.';
-          } else {
-            errorMessage = error.message || errorMessage;
-          }
-          toast({
-            variant: 'destructive',
-            title: '가입 실패',
-            description: errorMessage,
-          });
-      } finally {
-        setIsLoading(false);
-      }
+        toast({
+          variant: 'destructive',
+          title: '인증 실패',
+          description: errorMessage,
+        });
+    } finally {
+      setIsLoading(false);
     }
   }
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        {type === 'signup' && (
-          <FormField
-            control={form.control}
-            name="name"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>이름</FormLabel>
-                <FormControl>
-                  <Input placeholder="홍길동" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        )}
         <FormField
           control={form.control}
           name="email"
@@ -199,51 +126,14 @@ export function AuthForm({ type }: AuthFormProps) {
             </FormItem>
           )}
         />
-        {type === 'signup' && (
-            <FormField
-            control={form.control}
-            name="role"
-            render={({ field }) => (
-                <FormItem>
-                <FormLabel>역할</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                    <SelectTrigger>
-                        <SelectValue placeholder="역할 선택..." />
-                    </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                    <SelectItem value="admin">관리자</SelectItem>
-                    <SelectItem value="teacher">교사</SelectItem>
-                    <SelectItem value="student">학생</SelectItem>
-                    </SelectContent>
-                </Select>
-                <FormMessage />
-                </FormItem>
-            )}
-            />
-        )}
         <Button type="submit" className="w-full" disabled={isLoading}>
           {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          {type === 'login' ? '로그인' : '가입하기'}
+          로그인
         </Button>
       </form>
       <p className="mt-4 text-center text-sm text-muted-foreground">
-        {type === 'login' ? (
-          <>
-            계정이 없으신가요?{' '}
-            <Link href="/signup" className="underline hover:text-primary">
-              가입하기
-            </Link>
-          </>
-        ) : (
-          <>
-            이미 계정이 있으신가요?{' '}
-            <Link href="/login" className="underline hover:text-primary">
-              로그인
-            </Link>
-          </>
-        )}
+        계정이 없으신가요?{' '}
+        <span className="text-muted-foreground/50">(관리자에게 문의)</span>
       </p>
     </Form>
   );

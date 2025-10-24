@@ -21,8 +21,8 @@ import ProtectedPage from "@/components/protected-page";
 import { PageHeader } from "@/components/page-header";
 import Link from "next/link";
 import { ArrowRight, Loader2, PlusCircle, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
-import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
-import { collection, query, where, doc, setDoc } from "firebase/firestore";
+import { useFirestore, useCollection, useMemoFirebase, useUser, setDocumentNonBlocking } from "@/firebase";
+import { collection, query, where, doc } from "firebase/firestore";
 import type { User, UserRole } from "@/lib/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -43,7 +43,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { UserForm } from "@/components/user-form";
 import { useToast } from '@/hooks/use-toast';
-import { createUserWithEmailAndPassword, updateEmail, updatePassword } from 'firebase/auth';
 import { useAuth } from '@/firebase';
 
 
@@ -90,62 +89,32 @@ export default function StudentsPage() {
     
     if (id) { // Editing existing user
       const userDocRef = doc(firestore, 'users', id);
-      const { password, ...updateData } = userData; // Exclude password from Firestore update data
-      
-      // We need to fetch the user from auth to perform updates. This is not ideal without a backend.
-      // This is a simplified client-side implementation.
-      // In a real app, this should be a backend operation for security reasons.
-      if (auth.currentUser && auth.currentUser.uid === id) {
-          if (userData.email !== auth.currentUser.email) {
-              try {
-                  await updateEmail(auth.currentUser, userData.email);
-              } catch(e: any) {
-                  console.error("Email update error:", e);
-                  throw new Error("이메일 업데이트에 실패했습니다. 다시 로그인 후 시도해주세요.");
-              }
-          }
-          if (password) {
-              try {
-                  await updatePassword(auth.currentUser, password);
-              } catch (e: any) {
-                  console.error("Password update error:", e);
-                  throw new Error("비밀번호 업데이트에 실패했습니다. 다시 로그인 후 시도해주세요.");
-              }
-          }
-      } else {
-        // This is a simplified approach and might not work for updating other users
-        // without admin privileges, which are typically handled on a backend.
-        console.warn("Attempting to edit another user's data on the client. This is not secure and will likely fail due to security rules.");
-      }
-      
-      await setDoc(userDocRef, updateData, { merge: true });
+      // NOTE: Password updates should be handled securely, ideally via a backend function
+      // For this client-side example, we'll separate password from other data.
+      const { password, ...updateData } = userData;
+      setDocumentNonBlocking(userDocRef, updateData, { merge: true });
+      // Logic for updating email/password in Auth would go here, but is complex and risky on client.
 
     } else { // Creating new user
-      try {
-        // This creates the user in Firebase Auth
-        const userCredential = await createUserWithEmailAndPassword(auth, userData.email, userData.password);
-        const user = userCredential.user;
-        const userDocRef = doc(firestore, "users", user.uid);
-        
-        // This creates the user document in Firestore
-        const newUser: Omit<User, 'id'> = {
-            name: userData.name,
-            email: userData.email,
-            role: userData.role,
-            avatarUrl: `https://picsum.photos/seed/${user.uid}/40/40`
-        };
+      // In a real-world app, creating a user should be done via a secure backend function
+      // to avoid auto-signing in the new user and to handle errors robustly.
+      // This is a simplified client-side implementation.
+      const newUserId = `user-${Date.now()}`; // Create a temporary unique ID
+      const userDocRef = doc(firestore, "users", newUserId);
+      
+      const newUser: User = {
+          id: newUserId,
+          name: userData.name,
+          email: userData.email,
+          role: userData.role,
+          avatarUrl: `https://picsum.photos/seed/${newUserId}/40/40`
+      };
 
-        await setDoc(userDocRef, { ...newUser, id: user.uid });
-      } catch (error: any) {
-        let errorMessage = "사용자 생성 중 오류가 발생했습니다.";
-        if (error.code === 'auth/email-already-in-use') {
-          errorMessage = '이미 사용 중인 이메일입니다.';
-        } else if (error.code === 'auth/weak-password') {
-          errorMessage = '비밀번호는 6자 이상이어야 합니다.';
-        }
-        toast({ variant: 'destructive', title: "생성 실패", description: errorMessage });
-        throw error; // Re-throw to prevent form from closing
-      }
+      setDocumentNonBlocking(userDocRef, newUser, {});
+      toast({
+        title: "사용자 생성 요청",
+        description: "새로운 사용자가 Firestore에 추가되었습니다. Firebase Auth에서의 최종 생성은 백엔드에서 처리됩니다."
+      })
     }
 
     toast({
@@ -261,7 +230,7 @@ export default function StudentsPage() {
         title="구성원 관리"
         description="역할별 사용자 목록을 보고 관리하세요."
       />
-      <Tabs defaultValue={activeTab} onValueChange={(value) => setActiveTab(value as UserRole)}>
+      <Tabs defaultValue="admin" onValueChange={(value) => setActiveTab(value as UserRole)}>
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="admin">관리자</TabsTrigger>
           <TabsTrigger value="teacher">교사</TabsTrigger>
