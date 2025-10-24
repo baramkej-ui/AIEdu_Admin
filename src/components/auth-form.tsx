@@ -31,14 +31,19 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
-const formSchema = z.object({
-  name: z.string().optional(),
+const baseFormSchema = z.object({
   email: z.string().min(1, '이메일을 입력해주세요.').email({ message: '유효한 이메일을 입력해주세요.' }),
   password: z.string().min(1, '비밀번호를 입력해주세요.'),
+});
+
+const signupFormSchema = baseFormSchema.extend({
+  name: z.string().min(1, '이름을 입력해주세요.'),
+  password: z.string().min(6, '비밀번호는 6자 이상이어야 합니다.'),
   role: z.enum(['admin', 'teacher', 'student'], {
     required_error: '역할을 선택해주세요.',
   }),
 });
+
 
 interface AuthFormProps {
   type: 'login' | 'signup';
@@ -57,10 +62,7 @@ export function AuthForm({ type }: AuthFormProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = React.useState(false);
 
-  const currentFormSchema =
-    type === 'signup'
-      ? formSchema.extend({ name: z.string().min(1, '이름을 입력해주세요.'), password: z.string().min(6, '비밀번호는 6자 이상이어야 합니다.')})
-      : formSchema;
+  const currentFormSchema = type === 'signup' ? signupFormSchema : baseFormSchema;
 
   const form = useForm<z.infer<typeof currentFormSchema>>({
     resolver: zodResolver(currentFormSchema),
@@ -103,8 +105,6 @@ export function AuthForm({ type }: AuthFormProps) {
           let errorMessage = "오류가 발생했습니다.";
           if (errorCode === 'auth/user-not-found' || errorCode === 'auth/wrong-password' || errorCode === 'auth/invalid-credential') {
             errorMessage = '이메일 또는 비밀번호가 잘못되었습니다.';
-          } else {
-            errorMessage = error.message || errorMessage;
           }
           toast({
             variant: 'destructive',
@@ -115,7 +115,7 @@ export function AuthForm({ type }: AuthFormProps) {
         setIsLoading(false);
       }
     } else if (type === 'signup') {
-      const { name, email, password, role } = values as z.infer<typeof formSchema>;
+      const { name, email, password, role } = values as z.infer<typeof signupFormSchema>;
       try {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
