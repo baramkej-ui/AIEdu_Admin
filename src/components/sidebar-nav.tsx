@@ -27,9 +27,7 @@ const navItems = {
     { href: '/problems', label: '학습 관리', icon: BookOpen },
     { href: '/level-tests', label: '레벨테스트 관리', icon: ClipboardList },
   ],
-  student: [
-    { href: '/problems', label: '문제 풀기', icon: BookOpen },
-  ],
+  student: [], // Student nav items are removed
 };
 
 interface SidebarNavProps {

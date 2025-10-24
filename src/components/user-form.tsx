@@ -48,7 +48,7 @@ const createUserSchema = baseSchema.extend({
     confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
     message: "비밀번호가 일치하지 않습니다.",
-    path: ["confirmPassword"], // path of error
+    path: ["confirmPassword"],
 });
 
 const updateUserSchema = baseSchema.extend({
@@ -112,12 +112,16 @@ export function UserForm({ user, onSave, isOpen, setIsOpen, defaultRole }: UserF
       const dataToSave = { ...values };
       if (isEditing && !dataToSave.password) {
         delete dataToSave.password;
+        delete dataToSave.confirmPassword;
       }
       await onSave(dataToSave, user?.id);
       setIsOpen(false);
-    } catch (error) {
-      // Error toast is handled in the parent component
-      console.error("Save failed:", error);
+    } catch (error: any) {
+        toast({
+            variant: "destructive",
+            title: "저장 실패",
+            description: error.message || "사용자를 저장하는 중 오류가 발생했습니다."
+        });
     } finally {
       setIsLoading(false);
     }

@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -74,11 +73,22 @@ export function AuthForm({ type }: AuthFormProps) {
 
       const userDocRef = doc(firestore, 'users', user.uid);
       const userDoc = await getDoc(userDocRef);
+
       if (userDoc.exists()) {
           const userData = userDoc.data() as User;
-          toast({ title: "로그인 성공", description: "대시보드로 이동합니다." });
-          router.push(roleRedirects[userData.role]);
+          if (userData.role !== 'admin') {
+            await auth.signOut();
+            toast({
+              variant: 'destructive',
+              title: '로그인 실패',
+              description: '관리자 계정으로만 로그인할 수 있습니다.',
+            });
+          } else {
+            toast({ title: "로그인 성공", description: "대시보드로 이동합니다." });
+            router.push(roleRedirects[userData.role]);
+          }
       } else {
+          await auth.signOut();
           throw new Error("사용자 역할 정보를 찾을 수 없습니다.");
       }
     } catch (error: any) {
@@ -86,6 +96,8 @@ export function AuthForm({ type }: AuthFormProps) {
         let errorMessage = "오류가 발생했습니다.";
         if (errorCode === 'auth/user-not-found' || errorCode === 'auth/wrong-password' || errorCode === 'auth/invalid-credential') {
           errorMessage = '이메일 또는 비밀번호가 잘못되었습니다.';
+        } else {
+            errorMessage = error.message;
         }
         toast({
           variant: 'destructive',

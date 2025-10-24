@@ -33,7 +33,12 @@ export default function HomePage() {
       if (userDoc.exists()) {
         const userData = userDoc.data() as User;
         setDbUser(userData);
-        router.replace(roleRedirects[userData.role]);
+        if (userData.role === 'admin') {
+            router.replace(roleRedirects[userData.role]);
+        } else {
+            // Non-admin users are handled by protected routes, but as a fallback
+            router.replace('/login'); 
+        }
       } else {
         // Handle case where user exists in Auth but not in Firestore
         // For now, redirect to login

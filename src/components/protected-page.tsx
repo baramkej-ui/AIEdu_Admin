@@ -15,7 +15,7 @@ interface ProtectedPageProps {
 const roleRedirects: Record<UserRole, string> = {
   admin: '/dashboard',
   teacher: '/students',
-  student: '/problems',
+  student: '/login', // Students can't log in, redirect to login
 };
 
 export default function ProtectedPage({ children, allowedRoles }: ProtectedPageProps) {
@@ -41,7 +41,7 @@ export default function ProtectedPage({ children, allowedRoles }: ProtectedPageP
         const userData = userDoc.data() as User;
         setDbUser(userData);
         if (!allowedRoles.includes(userData.role)) {
-          router.replace(roleRedirects[userData.role]);
+          router.replace(roleRedirects[userData.role] || '/login');
         }
       } else {
         router.replace('/login');

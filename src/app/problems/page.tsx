@@ -43,7 +43,7 @@ export default function ProblemsPage() {
       return null;
     }
 
-    // All roles see the same content now
+    // All allowed roles (admin, teacher) see the same content now
     return (
       <>
         <PageHeader
@@ -70,8 +70,9 @@ export default function ProblemsPage() {
     );
   }
 
+  // Only admin and teacher can access this page now
   return (
-    <ProtectedPage allowedRoles={["admin", "teacher", "student"]}>
+    <ProtectedPage allowedRoles={["admin", "teacher"]}>
       {renderContent()}
     </ProtectedPage>
   );

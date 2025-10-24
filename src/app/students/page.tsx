@@ -42,12 +42,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import { UserForm } from "@/components/user-form";
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/firebase';
+import { createFirebaseAuthUser } from '@/ai/flows/create-firebase-auth-user';
 
 
 export default function StudentsPage() {
   const firestore = useFirestore();
-  const auth = useAuth();
   const { user: authUser } = useUser();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = React.useState<UserRole>("admin");
@@ -81,45 +80,51 @@ export default function StudentsPage() {
   }
   
   const handleSaveUser = async (userData: any, id?: string) => {
-    if (!firestore || !auth) {
-      toast({ variant: 'destructive', title: "오류", description: "인증 또는 데이터베이스 서비스를 사용할 수 없습니다." });
+    if (!firestore) {
+      toast({ variant: 'destructive', title: "오류", description: "데이터베이스 서비스를 사용할 수 없습니다." });
       return;
     }
     
     if (id) { // Editing existing user
       const userDocRef = doc(firestore, 'users', id);
-      // NOTE: Password updates should be handled securely, ideally via a backend function
-      // For this client-side example, we'll separate password from other data.
       const { password, ...updateData } = userData;
       setDocumentNonBlocking(userDocRef, updateData, { merge: true });
-      // Logic for updating email/password in Auth would go here, but is complex and risky on client.
+      // Note: Password/email updates in Auth for existing users would require re-authentication and is complex for this flow.
+      // For now, we only update Firestore data.
+      toast({
+          title: "성공",
+          description: "사용자 정보가 성공적으로 업데이트되었습니다."
+      });
 
     } else { // Creating new user
-      // In a real-world app, creating a user should be done via a secure backend function
-      // to avoid auto-signing in the new user and to handle errors robustly.
-      // This is a simplified client-side implementation.
-      const newUserId = `user-${Date.now()}`; // Create a temporary unique ID
-      const userDocRef = doc(firestore, "users", newUserId);
+        if (!userData.password) {
+            throw new Error("새 사용자에게는 비밀번호가 필요합니다.");
+        }
+        
+        // 1. Create user in Firebase Auth via Genkit Flow
+        const authResult = await createFirebaseAuthUser({ email: userData.email, password: userData.password });
+
+        if (!authResult.uid) {
+            throw new Error(authResult.error || "Firebase Auth에서 사용자 생성에 실패했습니다.");
+        }
+
+        // 2. Create user in Firestore with the UID from Auth
+        const newUser: User = {
+            id: authResult.uid,
+            name: userData.name,
+            email: userData.email,
+            role: userData.role,
+            avatarUrl: `https://picsum.photos/seed/${authResult.uid}/40/40`
+        };
+
+        const userDocRef = doc(firestore, "users", authResult.uid);
+        setDocumentNonBlocking(userDocRef, newUser, {});
       
-      const newUser: User = {
-          id: newUserId,
-          name: userData.name,
-          email: userData.email,
-          role: userData.role,
-          avatarUrl: `https://picsum.photos/seed/${newUserId}/40/40`
-      };
-
-      setDocumentNonBlocking(userDocRef, newUser, {});
-      toast({
-        title: "사용자 생성 요청",
-        description: "새로운 사용자가 Firestore에 추가되었습니다. Firebase Auth에서의 최종 생성은 백엔드에서 처리됩니다."
-      })
+        toast({
+            title: "성공",
+            description: "새로운 사용자가 성공적으로 생성되었습니다."
+        });
     }
-
-    toast({
-        title: "성공",
-        description: "사용자 정보가 성공적으로 저장되었습니다."
-    });
   }
 
   const openDeleteDialog = (user: User) => {
@@ -128,8 +133,13 @@ export default function StudentsPage() {
   }
 
   const handleDelete = () => {
-    // Logic to delete user will be implemented here
-    console.log("Deleting user:", userToDelete?.id);
+    // Logic to delete user would need a backend function for security.
+    // For now, it only closes the dialog.
+    console.log("Deleting user (simulation):", userToDelete?.id);
+    toast({
+        title: "삭제 시뮬레이션",
+        description: "실제 삭제는 백엔드 기능이 필요합니다.",
+    });
     setIsAlertOpen(false);
     setUserToDelete(null);
   }
