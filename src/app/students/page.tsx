@@ -19,8 +19,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import ProtectedPage from "@/components/protected-page";
 import { PageHeader } from "@/components/page-header";
-import Link from "next/link";
-import { ArrowRight, Loader2, PlusCircle, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { Loader2, PlusCircle, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { useFirestore, useCollection, useMemoFirebase, useUser, setDocumentNonBlocking } from "@/firebase";
 import { collection, query, where, doc } from "firebase/firestore";
 import type { User, UserRole } from "@/lib/types";
@@ -188,32 +187,24 @@ export default function StudentsPage() {
                   </TableCell>
                   <TableCell className="hidden md:table-cell">{user.email}</TableCell>
                   <TableCell className="text-right">
-                    {role === 'student' ? (
-                       <Button asChild variant="ghost" size="sm">
-                        <Link href={`/students/${user.id}`}>
-                          진행 상황 보기 <ArrowRight className="ml-2 h-4 w-4" />
-                        </Link>
-                      </Button>
-                    ) : (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">메뉴 열기</span>
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleEditUser(user)}>
-                            <Pencil className="mr-2 h-4 w-4" />
-                            수정
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => openDeleteDialog(user)} className="text-destructive focus:text-destructive">
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            삭제
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                          <span className="sr-only">메뉴 열기</span>
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleEditUser(user)}>
+                          <Pencil className="mr-2 h-4 w-4" />
+                          수정
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => openDeleteDialog(user)} className="text-destructive focus:text-destructive">
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          삭제
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
               ))}
@@ -230,7 +221,7 @@ export default function StudentsPage() {
         title="구성원 관리"
         description="역할별 사용자 목록을 보고 관리하세요."
       />
-      <Tabs defaultValue="admin" onValueChange={(value) => setActiveTab(value as UserRole)}>
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as UserRole)}>
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="admin">관리자</TabsTrigger>
           <TabsTrigger value="teacher">교사</TabsTrigger>
