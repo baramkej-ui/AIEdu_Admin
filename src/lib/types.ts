@@ -34,7 +34,7 @@ export type Student = User & {
 };
 
 export type LevelTest = {
-    id: string;
+    id: 'reading' | 'writing' | 'speaking' | 'listening';
     totalTimeMinutes: number;
     problemIds: string[];
 };

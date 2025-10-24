@@ -14,6 +14,8 @@ export default function LevelTestsPage() {
   const handleButtonClick = (type: string) => {
     if (type === 'Reading') {
       router.push('/level-tests/reading');
+    } else if (type === 'Writing') {
+      router.push('/level-tests/writing');
     } else {
       router.push('/coming-soon');
     }
@@ -34,7 +36,7 @@ export default function LevelTestsPage() {
                 variant="outline"
                 className="h-24 text-lg"
                 onClick={() => handleButtonClick(type)}
-                disabled={type !== 'Reading'}
+                disabled={type !== 'Reading' && type !== 'Writing'}
               >
                 {type}
               </Button>
