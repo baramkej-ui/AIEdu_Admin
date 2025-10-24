@@ -51,7 +51,19 @@ const createUserSchema = baseSchema.extend({
     path: ["confirmPassword"], // path of error
 });
 
-const updateUserSchema = baseSchema;
+const updateUserSchema = baseSchema.extend({
+  password: z.string().optional(),
+  confirmPassword: z.string().optional(),
+}).refine((data) => {
+    if (data.password || data.confirmPassword) {
+        if (!data.password || data.password.length < 6) return false;
+        return data.password === data.confirmPassword;
+    }
+    return true;
+}, {
+    message: "비밀번호가 일치하지 않거나 6자 미만입니다.",
+    path: ["confirmPassword"],
+});
 
 
 interface UserFormProps {
@@ -75,7 +87,11 @@ export function UserForm({ user, onSave, isOpen, setIsOpen, defaultRole }: UserF
   React.useEffect(() => {
     if (isOpen) {
         if (user) { // Editing
-            form.reset(user);
+            form.reset({
+              ...user,
+              password: '',
+              confirmPassword: ''
+            });
         } else { // Creating
             form.reset({
                 name: '',
@@ -92,7 +108,12 @@ export function UserForm({ user, onSave, isOpen, setIsOpen, defaultRole }: UserF
   async function onSubmit(values: z.infer<typeof createUserSchema>) {
     setIsLoading(true);
     try {
-      await onSave(values, user?.id);
+      // For updates, don't send empty password fields
+      const dataToSave = { ...values };
+      if (isEditing && !dataToSave.password) {
+        delete dataToSave.password;
+      }
+      await onSave(dataToSave, user?.id);
       setIsOpen(false);
     } catch (error) {
       // Error toast is handled in the parent component
@@ -133,14 +154,13 @@ export function UserForm({ user, onSave, isOpen, setIsOpen, defaultRole }: UserF
                 <FormItem>
                   <FormLabel>이메일</FormLabel>
                   <FormControl>
-                    <Input placeholder="name@example.com" {...field} disabled={isEditing} />
+                    <Input placeholder="name@example.com" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            {isEditing ? (
-              <FormField
+            <FormField
                 control={form.control}
                 name="role"
                 render={({ field }) => (
@@ -162,14 +182,13 @@ export function UserForm({ user, onSave, isOpen, setIsOpen, defaultRole }: UserF
                   </FormItem>
                 )}
               />
-            ) : (
               <>
                 <FormField
                   control={form.control}
                   name="password"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>비밀번호</FormLabel>
+                      <FormLabel>{isEditing ? "새 비밀번호 (선택)" : "비밀번호"}</FormLabel>
                       <FormControl>
                         <Input type="password" placeholder="••••••••" {...field} />
                       </FormControl>
@@ -182,7 +201,7 @@ export function UserForm({ user, onSave, isOpen, setIsOpen, defaultRole }: UserF
                   name="confirmPassword"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>비밀번호 확인</FormLabel>
+                      <FormLabel>{isEditing ? "새 비밀번호 확인" : "비밀번호 확인"}</FormLabel>
                       <FormControl>
                         <Input type="password" placeholder="••••••••" {...field} />
                       </FormControl>
@@ -191,7 +210,6 @@ export function UserForm({ user, onSave, isOpen, setIsOpen, defaultRole }: UserF
                   )}
                 />
               </>
-            )}
             <DialogFooter className="pt-4">
               <DialogClose asChild>
                 <Button type="button" variant="outline">취소</Button>

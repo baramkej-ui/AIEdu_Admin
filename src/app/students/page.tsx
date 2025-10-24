@@ -43,7 +43,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { UserForm } from "@/components/user-form";
 import { useToast } from '@/hooks/use-toast';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, updateEmail, updatePassword } from 'firebase/auth';
 import { useAuth } from '@/firebase';
 
 
@@ -83,22 +83,51 @@ export default function StudentsPage() {
   }
   
   const handleSaveUser = async (userData: any, id?: string) => {
-    if (!firestore) return;
+    if (!firestore || !auth) {
+      toast({ variant: 'destructive', title: "오류", description: "인증 또는 데이터베이스 서비스를 사용할 수 없습니다." });
+      return;
+    }
     
     if (id) { // Editing existing user
       const userDocRef = doc(firestore, 'users', id);
-      const { password, ...updateData } = userData; // Exclude password from update data
-      await setDoc(userDocRef, updateData, { merge: true });
-    } else { // Creating new user
-      if (!auth) {
-        toast({ variant: 'destructive', title: "오류", description: "인증 서비스를 사용할 수 없습니다." });
-        return;
+      const { password, ...updateData } = userData; // Exclude password from Firestore update data
+      
+      // We need to fetch the user from auth to perform updates. This is not ideal without a backend.
+      // This is a simplified client-side implementation.
+      // In a real app, this should be a backend operation for security reasons.
+      if (auth.currentUser && auth.currentUser.uid === id) {
+          if (userData.email !== auth.currentUser.email) {
+              try {
+                  await updateEmail(auth.currentUser, userData.email);
+              } catch(e: any) {
+                  console.error("Email update error:", e);
+                  throw new Error("이메일 업데이트에 실패했습니다. 다시 로그인 후 시도해주세요.");
+              }
+          }
+          if (password) {
+              try {
+                  await updatePassword(auth.currentUser, password);
+              } catch (e: any) {
+                  console.error("Password update error:", e);
+                  throw new Error("비밀번호 업데이트에 실패했습니다. 다시 로그인 후 시도해주세요.");
+              }
+          }
+      } else {
+        // This is a simplified approach and might not work for updating other users
+        // without admin privileges, which are typically handled on a backend.
+        console.warn("Attempting to edit another user's data on the client. This is not secure and will likely fail due to security rules.");
       }
+      
+      await setDoc(userDocRef, updateData, { merge: true });
+
+    } else { // Creating new user
       try {
+        // This creates the user in Firebase Auth
         const userCredential = await createUserWithEmailAndPassword(auth, userData.email, userData.password);
         const user = userCredential.user;
         const userDocRef = doc(firestore, "users", user.uid);
         
+        // This creates the user document in Firestore
         const newUser: Omit<User, 'id'> = {
             name: userData.name,
             email: userData.email,
