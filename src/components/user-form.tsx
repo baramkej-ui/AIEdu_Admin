@@ -160,56 +160,57 @@ export function UserForm({ user, onSave, isOpen, setIsOpen, defaultRole }: UserF
                 </FormItem>
               )}
             />
-            <FormField
+            {isEditing ? (
+              <FormField
+                  control={form.control}
+                  name="role"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>역할</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="역할 선택..." />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="admin">관리자</SelectItem>
+                          <SelectItem value="teacher">교사</SelectItem>
+                          <SelectItem value="student">학생</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+            ) : null }
+              
+              <FormField
                 control={form.control}
-                name="role"
+                name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>역할</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="역할 선택..." />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="admin">관리자</SelectItem>
-                        <SelectItem value="teacher">교사</SelectItem>
-                        <SelectItem value="student">학생</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <FormLabel>{isEditing ? "새 비밀번호 (선택)" : "비밀번호"}</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="••••••••" {...field} />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <>
-                <FormField
-                  control={form.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{isEditing ? "새 비밀번호 (선택)" : "비밀번호"}</FormLabel>
-                      <FormControl>
-                        <Input type="password" placeholder="••••••••" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="confirmPassword"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{isEditing ? "새 비밀번호 확인" : "비밀번호 확인"}</FormLabel>
-                      <FormControl>
-                        <Input type="password" placeholder="••••••••" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </>
+              <FormField
+                control={form.control}
+                name="confirmPassword"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{isEditing ? "새 비밀번호 확인" : "비밀번호 확인"}</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="••••••••" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             <DialogFooter className="pt-4">
               <DialogClose asChild>
                 <Button type="button" variant="outline">취소</Button>
