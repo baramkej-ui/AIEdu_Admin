@@ -14,7 +14,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import ProtectedPage from "@/components/protected-page";
 import { PageHeader } from "@/components/page-header";
 import { notFound } from "next/navigation";
@@ -23,7 +22,6 @@ import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recha
 import { useFirestore, useDoc, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, doc, query, where } from "firebase/firestore";
 import type { User, Problem, StudentProgress } from "@/lib/types";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Loader2 } from "lucide-react";
 
 
@@ -163,7 +161,6 @@ export default function StudentDetailPage({ params }: { params: { id: string } }
                 <TableHead>문제</TableHead>
                 <TableHead>결과</TableHead>
                 <TableHead>소요 시간(초)</TableHead>
-                <TableHead>난이도</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -180,11 +177,6 @@ export default function StudentDetailPage({ params }: { params: { id: string } }
                       )}
                     </TableCell>
                     <TableCell>{p.timeTaken}</TableCell>
-                    <TableCell>
-                        {problem ? <Badge variant={problem.difficulty === 'hard' ? 'destructive' : problem.difficulty === 'medium' ? 'secondary' : 'default'}>
-                            {problem.difficulty}
-                        </Badge> : '-'}
-                    </TableCell>
                   </TableRow>
                 );
               })}

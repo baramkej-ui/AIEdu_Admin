@@ -19,12 +19,13 @@ const navItems = {
   admin: [
     { href: '/dashboard', label: '대시보드', icon: LayoutDashboard },
     { href: '/level-tests', label: '레벨테스트 관리', icon: ClipboardList },
-    { href: '/problems/list', label: '학습 관리', icon: BookOpen },
+    { href: '/problems', label: '학습 관리', icon: BookOpen },
     { href: '/students', label: '구성원 관리', icon: Users },
   ],
   teacher: [
     { href: '/students', label: '구성원 관리', icon: Users },
-    { href: '/problems/list', label: '학습 관리', icon: BookOpen },
+    { href: '/problems', label: '학습 관리', icon: BookOpen },
+    { href: '/level-tests', label: '레벨테스트 관리', icon: ClipboardList },
   ],
   student: [
     { href: '/problems', label: '문제 풀기', icon: BookOpen },
@@ -58,7 +59,7 @@ export function SidebarNav({ isCollapsed }: SidebarNavProps) {
     <TooltipProvider>
       <nav className="flex flex-col gap-2">
         {userNavItems.map((item) => {
-          const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
+          const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href) && item.href !== '/dashboard');
           const Icon = item.icon;
 
           return isCollapsed ? (

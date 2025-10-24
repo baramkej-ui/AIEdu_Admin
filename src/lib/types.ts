@@ -31,7 +31,6 @@ export type StudentProgress = {
 
 export type Student = User & {
   role: 'student';
-  progress: StudentProgress[];
 };
 
 export type LevelTest = {
