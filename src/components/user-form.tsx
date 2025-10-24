@@ -24,7 +24,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import type { User } from '@/lib/types';
+import type { User, UserRole } from '@/lib/types';
 import {
   Dialog,
   DialogContent,
@@ -35,60 +35,68 @@ import {
   DialogClose,
 } from '@/components/ui/dialog';
 
-const userFormSchema = z.object({
+const baseSchema = z.object({
     name: z.string().min(1, '이름을 입력해주세요.'),
     email: z.string().email('유효한 이메일을 입력해주세요.'),
-    role: z.enum(['admin', 'teacher', 'student'], {
-        required_error: '역할을 선택해주세요.',
-    }),
+    role: z.enum(['admin', 'teacher', 'student']),
     id: z.string().optional(),
     avatarUrl: z.string().url().optional(),
 });
 
-type UserFormData = z.infer<typeof userFormSchema>;
+const createUserSchema = baseSchema.extend({
+    password: z.string().min(6, '비밀번호는 6자 이상이어야 합니다.'),
+    confirmPassword: z.string(),
+}).refine((data) => data.password === data.confirmPassword, {
+    message: "비밀번호가 일치하지 않습니다.",
+    path: ["confirmPassword"], // path of error
+});
+
+const updateUserSchema = baseSchema;
+
 
 interface UserFormProps {
   user?: User;
-  onSave: (data: Omit<User, 'id'>, id?: string) => Promise<void>;
+  onSave: (data: any, id?: string) => Promise<void>;
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
+  defaultRole: UserRole;
 }
 
-export function UserForm({ user, onSave, isOpen, setIsOpen }: UserFormProps) {
+export function UserForm({ user, onSave, isOpen, setIsOpen, defaultRole }: UserFormProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = React.useState(false);
+  
+  const isEditing = !!user;
 
-  const form = useForm<UserFormData>({
-    resolver: zodResolver(userFormSchema),
+  const form = useForm<z.infer<typeof createUserSchema>>({
+    resolver: zodResolver(isEditing ? updateUserSchema : createUserSchema),
   });
   
   React.useEffect(() => {
     if (isOpen) {
-        if (user) {
+        if (user) { // Editing
             form.reset(user);
-        } else {
+        } else { // Creating
             form.reset({
                 name: '',
                 email: '',
-                role: 'student',
+                role: defaultRole,
+                password: '',
+                confirmPassword: '',
             });
         }
     }
-  }, [isOpen, user, form]);
+  }, [isOpen, user, defaultRole, form]);
 
 
-  async function onSubmit(values: UserFormData) {
+  async function onSubmit(values: z.infer<typeof createUserSchema>) {
     setIsLoading(true);
     try {
-      const saveData = { ...values };
-      await onSave(saveData, user?.id);
+      await onSave(values, user?.id);
       setIsOpen(false);
     } catch (error) {
-      toast({
-        variant: 'destructive',
-        title: '저장 실패',
-        description: (error as Error).message,
-      });
+      // Error toast is handled in the parent component
+      console.error("Save failed:", error);
     } finally {
       setIsLoading(false);
     }
@@ -98,9 +106,9 @@ export function UserForm({ user, onSave, isOpen, setIsOpen }: UserFormProps) {
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>{user ? '사용자 정보 수정' : '새 사용자 추가'}</DialogTitle>
+          <DialogTitle>{isEditing ? '사용자 정보 수정' : '새 사용자 추가'}</DialogTitle>
           <DialogDescription>
-            사용자의 정보를 입력하고 역할을 지정해주세요.
+            {isEditing ? '사용자의 정보를 수정합니다.' : '새로운 사용자의 정보를 입력해주세요.'}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -125,36 +133,65 @@ export function UserForm({ user, onSave, isOpen, setIsOpen }: UserFormProps) {
                 <FormItem>
                   <FormLabel>이메일</FormLabel>
                   <FormControl>
-                    <Input placeholder="name@example.com" {...field} disabled={!!user} />
+                    <Input placeholder="name@example.com" {...field} disabled={isEditing} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="role"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>역할</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="역할 선택..." />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="admin">관리자</SelectItem>
-                      <SelectItem value="teacher">교사</SelectItem>
-                      <SelectItem value="student">학생</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            {/* Note: Password field is omitted for simplicity in admin management. 
-                A real app would require a more complex flow for password resets or initial setup. */}
+            {isEditing ? (
+              <FormField
+                control={form.control}
+                name="role"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>역할</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="역할 선택..." />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="admin">관리자</SelectItem>
+                        <SelectItem value="teacher">교사</SelectItem>
+                        <SelectItem value="student">학생</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            ) : (
+              <>
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>비밀번호</FormLabel>
+                      <FormControl>
+                        <Input type="password" placeholder="••••••••" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="confirmPassword"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>비밀번호 확인</FormLabel>
+                      <FormControl>
+                        <Input type="password" placeholder="••••••••" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </>
+            )}
             <DialogFooter className="pt-4">
               <DialogClose asChild>
                 <Button type="button" variant="outline">취소</Button>
