@@ -25,7 +25,7 @@ export default function ProblemsPage() {
 
   const handleButtonClick = (type: string) => {
     if (type === 'Role-Play') {
-      router.push('/coming-soon');
+      router.push('/problems/role-play');
     }
   };
 
@@ -43,7 +43,6 @@ export default function ProblemsPage() {
       return null;
     }
 
-    // All allowed roles (admin, teacher) see the same content now
     return (
       <>
         <PageHeader
@@ -70,7 +69,6 @@ export default function ProblemsPage() {
     );
   }
 
-  // Only admin and teacher can access this page now
   return (
     <ProtectedPage allowedRoles={["admin", "teacher"]}>
       {renderContent()}

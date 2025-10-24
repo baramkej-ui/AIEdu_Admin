@@ -29,12 +29,14 @@ export type StudentProgress = {
   timeTaken: number; // in seconds
 };
 
-export type Student = User & {
-  role: 'student';
-};
-
 export type LevelTest = {
     id: 'reading' | 'writing' | 'speaking' | 'listening';
     totalTimeMinutes: number;
     problemIds: string[];
+};
+
+export type RolePlayScenario = {
+  id: string;
+  place: string;
+  situation: string;
 };

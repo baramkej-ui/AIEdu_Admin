@@ -97,6 +97,27 @@
         "question",
         "type"
       ]
+    },
+    "RolePlayScenario": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "RolePlayScenario",
+      "type": "object",
+      "description": "Represents a role-playing scenario for practice.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the RolePlayScenario entity."
+        },
+        "place": {
+          "type": "string",
+          "description": "The location or setting of the scenario (e.g., 'Restaurant', 'Airport')."
+        },
+        "situation": {
+          "type": "string",
+          "description": "A detailed description of the situation the user needs to respond to."
+        }
+      },
+      "required": ["id", "place", "situation"]
     }
   },
   "auth": {
@@ -137,8 +158,24 @@
             }
           ]
         }
+      },
+      {
+        "path": "/rolePlayScenarios/{scenarioId}",
+        "definition": {
+            "entityName": "RolePlayScenario",
+            "schema": {
+                "$ref": "#/backend/entities/RolePlayScenario"
+            },
+            "description": "Stores all role-playing scenarios. Accessible to all authenticated users for reading. Only writable by admin or teacher roles.",
+            "params": [
+                {
+                    "name": "scenarioId",
+                    "description": "The unique identifier for the role-play scenario."
+                }
+            ]
+        }
       }
     ],
-    "reasoning": "The Firestore structure is simplified for this educational quiz app. All users are in a single 'users' collection, and all problems in a 'problems' collection. This makes querying for data straightforward."
+    "reasoning": "The Firestore structure is simplified for this educational quiz app. All users are in a single 'users' collection, all problems in a 'problems' collection, and all role-play scenarios in a 'rolePlayScenarios' collection. This makes querying for data straightforward."
   }
 }
