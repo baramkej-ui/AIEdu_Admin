@@ -55,6 +55,7 @@ const problemSchema = z
       .optional(),
     answer: z.string().optional(),
     grading: z.enum(['ai', 'teacher']).optional(),
+    gradingCriteria: z.string().optional(),
   })
   .refine(
     (data) => {
@@ -107,6 +108,7 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
       options: [],
       answer: '',
       grading: 'ai',
+      gradingCriteria: '',
     },
   });
 
@@ -117,6 +119,7 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
 
   const problemType = form.watch('type');
   const subjectiveType = form.watch('subType');
+  const gradingMethod = form.watch('grading');
   
   const handleOptionCountChange = (count: number) => {
     const currentCount = fields.length;
@@ -144,6 +147,7 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
         options: Array.from({ length: 4 }, () => ({ value: '' })),
         answer: '',
         grading: 'ai',
+        gradingCriteria: '',
       });
       
       if (problem) {
@@ -395,31 +399,52 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
                   )}
 
                   {subjectiveType === 'descriptive' && (
-                    <FormField
-                      control={form.control}
-                      name="grading"
-                      render={({ field }) => (
-                        <FormItem className="space-y-3">
-                          <FormLabel>채점 방식</FormLabel>
-                          <FormControl>
-                            <RadioGroup
-                              onValueChange={field.onChange}
-                              value={field.value || 'ai'}
-                              className="flex space-x-4"
-                            >
-                              <FormItem className="flex items-center space-x-2 space-y-0">
-                                <RadioGroupItem value="ai" />
-                                <FormLabel className="font-normal">AI 자동 채점</FormLabel>
-                              </FormItem>
-                              <FormItem className="flex items-center space-x-2 space-y-0">
-                                <RadioGroupItem value="teacher" />
-                                <FormLabel className="font-normal">교사 직접 채점</FormLabel>
-                              </FormItem>
-                            </RadioGroup>
-                          </FormControl>
-                        </FormItem>
+                    <>
+                      <FormField
+                        control={form.control}
+                        name="grading"
+                        render={({ field }) => (
+                          <FormItem className="space-y-3">
+                            <FormLabel>채점 방식</FormLabel>
+                            <FormControl>
+                              <RadioGroup
+                                onValueChange={field.onChange}
+                                value={field.value || 'ai'}
+                                className="flex space-x-4"
+                              >
+                                <FormItem className="flex items-center space-x-2 space-y-0">
+                                  <RadioGroupItem value="ai" />
+                                  <FormLabel className="font-normal">AI 자동 채점</FormLabel>
+                                </FormItem>
+                                <FormItem className="flex items-center space-x-2 space-y-0">
+                                  <RadioGroupItem value="teacher" />
+                                  <FormLabel className="font-normal">교사 직접 채점</FormLabel>
+                                </FormItem>
+                              </RadioGroup>
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      {gradingMethod === 'ai' && (
+                        <FormField
+                          control={form.control}
+                          name="gradingCriteria"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>AI 채점 기준</FormLabel>
+                              <FormControl>
+                                <Textarea
+                                  placeholder="AI가 답변을 채점할 때 사용할 구체적인 기준을 입력하세요. (예: 키워드, 문장 구조, 논리 전개 등)"
+                                  {...field}
+                                  rows={4}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
                       )}
-                    />
+                    </>
                   )}
                 </CardContent>
               </Card>

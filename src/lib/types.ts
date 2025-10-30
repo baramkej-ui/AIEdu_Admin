@@ -18,6 +18,7 @@ export type Problem = {
   options?: string[];
   answer?: string;
   grading?: 'ai' | 'teacher';
+  gradingCriteria?: string;
 };
 
 export type StudentProgress = {

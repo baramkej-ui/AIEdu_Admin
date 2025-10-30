@@ -89,6 +89,10 @@
             "type": "string",
             "description": "The grading method for descriptive questions.",
             "enum": ["ai", "teacher"]
+        },
+        "gradingCriteria": {
+            "type": "string",
+            "description": "The criteria for AI grading of descriptive questions."
         }
       },
       "required": [
