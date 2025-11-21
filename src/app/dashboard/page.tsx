@@ -2,7 +2,6 @@
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -13,9 +12,9 @@ import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
 import { collection, query } from "firebase/firestore";
 import type { User } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
+import * as React from 'react';
 
-
-export default function DashboardPage() {
+const DashboardContent = () => {
   const firestore = useFirestore();
 
   const usersQuery = useMemoFirebase(() => 
@@ -29,9 +28,9 @@ export default function DashboardPage() {
   const totalAdmins = usersData?.filter(u => u.role === 'admin').length ?? 0;
   const totalTeachers = usersData?.filter(u => u.role === 'teacher').length ?? 0;
   const totalStudents = usersData?.filter(u => u.role === 'student').length ?? 0;
-
+  
   return (
-    <ProtectedPage allowedRoles={["admin"]}>
+    <>
       <PageHeader
         title="Dashboard"
         description="Overview of the AIEdu platform."
@@ -86,6 +85,15 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+    </>
+  );
+}
+
+
+export default function DashboardPage() {
+  return (
+    <ProtectedPage allowedRoles={["admin"]}>
+      <DashboardContent />
     </ProtectedPage>
   );
 }
