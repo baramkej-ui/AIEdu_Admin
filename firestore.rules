@@ -53,14 +53,15 @@ service cloud.firestore {
      * @path /users/{userId}
      * @allow (get) Signed-in user can read their own profile.
      * @allow (list) Admin or teacher roles can list users.
-     * @allow (create) Signed-in user can create their own profile.
-     * @allow (update, delete) Signed-in user can update/delete their own profile.
+     * @allow (create) Signed-in user can create their own profile, or an admin/teacher can create any user profile.
+     * @allow (update) Signed-in user can update their own profile, or an admin/teacher can update any user profile.
+     * @allow (delete) Signed-in user can delete their own profile.
      */
     match /users/{userId} {
       allow get: if isSignedIn() && isOwner(userId);
       allow list: if isAdminOrTeacher();
-      allow create: if isSignedIn() && isOwner(userId);
-      allow update: if isSignedIn() && isOwner(userId);
+      allow create: if (isSignedIn() && isOwner(userId)) || isAdminOrTeacher();
+      allow update: if (isSignedIn() && isOwner(userId)) || isAdminOrTeacher();
       allow delete: if isSignedIn() && isOwner(userId);
     }
 
