@@ -19,7 +19,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import ProtectedPage from "@/components/protected-page";
 import { PageHeader } from "@/components/page-header";
-import { Loader2, PlusCircle, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { Loader2, PlusCircle, MoreHorizontal, Pencil, Trash2, UserCog, Users, UserCheck } from "lucide-react";
 import { useFirestore, useCollection, useMemoFirebase, useUser, setDocumentNonBlocking, useFirebaseApp } from "@/firebase";
 import { collection, query, where, doc } from "firebase/firestore";
 import type { User, UserRole } from "@/lib/types";
@@ -44,6 +44,7 @@ import { UserForm } from "@/components/user-form";
 import { useToast } from '@/hooks/use-toast';
 import { initializeApp, deleteApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
+import { Skeleton } from '@/components/ui/skeleton';
 
 
 const roleLabels: Record<UserRole, string> = {
@@ -57,21 +58,17 @@ const UserTable = ({
   onAddUser,
   onEditUser,
   onDeleteUser,
+  users,
+  isLoading
 }: {
   role: UserRole;
   onAddUser: (role: UserRole) => void;
   onEditUser: (user: User) => void;
   onDeleteUser: (user: User) => void;
+  users: User[] | null;
+  isLoading: boolean;
 }) => {
-  const firestore = useFirestore();
   const { user: authUser } = useUser();
-
-  const usersQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, 'users'), where('role', '==', role));
-  }, [firestore, role]);
-
-  const { data: users, isLoading } = useCollection<User>(usersQuery);
 
   const getInitials = (name: string) => {
     return name?.split(' ').map(n => n[0]).join('').toUpperCase() || '';
@@ -158,6 +155,13 @@ export default function StudentsPage() {
   const [userToDelete, setUserToDelete] = React.useState<User | null>(null);
   const [defaultRole, setDefaultRole] = React.useState<UserRole>('admin');
 
+  const usersQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'users'), where('role', '==', activeTab));
+  }, [firestore, activeTab]);
+
+  const { data: users, isLoading } = useCollection<User>(usersQuery);
+
   const handleAddUser = (role: UserRole) => {
     setUserToEdit(undefined);
     setDefaultRole(role);
@@ -217,7 +221,6 @@ export default function StudentsPage() {
             });
 
         } catch (error: any) {
-            console.error("Error creating user:", error);
             // Translate Firebase auth errors to user-friendly messages
             let errorMessage = error.message || "An unknown error occurred during user creation.";
             if (error.code === 'auth/email-already-in-use') {
@@ -227,6 +230,7 @@ export default function StudentsPage() {
             } else if (error.code === 'auth/weak-password') {
                 errorMessage = "The password is too weak. It must be at least 6 characters long.";
             }
+            // Re-throw the translated error message to be caught by the form
             throw new Error(errorMessage);
         } finally {
             // Clean up the secondary app instance
@@ -270,6 +274,8 @@ export default function StudentsPage() {
             onAddUser={handleAddUser}
             onEditUser={handleEditUser}
             onDeleteUser={openDeleteDialog}
+            users={users}
+            isLoading={isLoading}
           />
         </TabsContent>
         <TabsContent value="teacher" className="mt-4">
@@ -278,6 +284,8 @@ export default function StudentsPage() {
             onAddUser={handleAddUser}
             onEditUser={handleEditUser}
             onDeleteUser={openDeleteDialog}
+            users={users}
+            isLoading={isLoading}
           />
         </TabsContent>
         <TabsContent value="student" className="mt-4">
@@ -286,6 +294,8 @@ export default function StudentsPage() {
             onAddUser={handleAddUser}
             onEditUser={handleEditUser}
             onDeleteUser={openDeleteDialog}
+            users={users}
+            isLoading={isLoading}
           />
         </TabsContent>
       </Tabs>
