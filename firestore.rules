@@ -1,5 +1,5 @@
 /**
- * @fileoverview Firestore Security Rules for EduQuiz Platform
+ * @fileoverview Firestore Security Rules for AIEdu Platform
  *
  * Core Philosophy:
  * This ruleset enforces a role-based access control model with user-level ownership for specific data.

@@ -64,7 +64,7 @@ export default function DashboardPage() {
     <ProtectedPage allowedRoles={["admin"]}>
       <PageHeader
         title="Dashboard"
-        description="Overview of the EduQuiz platform."
+        description="Overview of the AIEdu platform."
       />
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>

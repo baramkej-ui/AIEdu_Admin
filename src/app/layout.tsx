@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { FirebaseClientProvider } from '@/firebase';
 
 export const metadata: Metadata = {
-  title: 'EduQuiz Platform',
+  title: 'AIEdu Platform',
   description: 'AI-Powered Personalized Learning Quiz Platform',
 };
 

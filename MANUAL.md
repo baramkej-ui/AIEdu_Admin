@@ -1,10 +1,10 @@
-# EduQuiz Admin Program Manual & Handover Document
+# AIEdu Admin Program Manual & Handover Document
 
 ## 1. Program Overview
 
 ### 1.1. Program Purpose
 
-This program is a **dedicated admin website** for managing and operating the core data of the **'EduQuiz AI Learning Platform'**. Its goal is to provide integrated management of students, teachers, and learning content (problems, level tests, etc.) who use the platform.
+This program is a **dedicated admin website** for managing and operating the core data of the **'AIEdu AI Learning Platform'**. Its goal is to provide integrated management of students, teachers, and learning content (problems, level tests, etc.) who use the platform.
 
 ### 1.2. Key Technologies (Simple Explanation)
 
