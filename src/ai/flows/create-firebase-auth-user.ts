@@ -32,6 +32,8 @@ if (!getApps().length) {
     adminApp = initializeApp({
         // Service account credentials will be automatically picked up
         // from the environment in a secure server environment.
+        // For local development, projectId is often sufficient.
+        projectId: firebaseConfig.projectId,
     });
 } else {
     adminApp = getApps()[0];
