@@ -20,7 +20,7 @@ import { Button } from "@/components/ui/button";
 import ProtectedPage from "@/components/protected-page";
 import { PageHeader } from "@/components/page-header";
 import { Loader2, PlusCircle, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
-import { useFirestore, useCollection, useMemoFirebase, useUser, setDocumentNonBlocking } from "@/firebase";
+import { useFirestore, useCollection, useMemoFirebase, useUser, setDocumentNonBlocking, useFirebaseApp } from "@/firebase";
 import { collection, query, where, doc } from "firebase/firestore";
 import type { User, UserRole } from "@/lib/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -42,7 +42,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { UserForm } from "@/components/user-form";
 import { useToast } from '@/hooks/use-toast';
-import { createFirebaseAuthUser } from '@/ai/flows/create-firebase-auth-user';
+import { initializeApp, deleteApp } from 'firebase/app';
+import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
+
 
 const roleLabels: Record<UserRole, string> = {
   admin: 'Admins',
@@ -146,6 +148,7 @@ const UserTable = ({
 
 export default function StudentsPage() {
   const firestore = useFirestore();
+  const mainApp = useFirebaseApp();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = React.useState<UserRole>("admin");
 
@@ -167,7 +170,7 @@ export default function StudentsPage() {
   }
   
   const handleSaveUser = async (userData: any, id?: string) => {
-    if (!firestore) {
+    if (!firestore || !mainApp) {
       toast({ variant: 'destructive', title: "Error", description: "Database service is not available." });
       return;
     }
@@ -188,29 +191,47 @@ export default function StudentsPage() {
             throw new Error("Password is required for a new user.");
         }
         
-        // 1. Create user in Firebase Auth via Genkit Flow
-        const authResult = await createFirebaseAuthUser({ email: userData.email, password: userData.password });
+        // Create a secondary app instance to create a user without signing out the current admin
+        const secondaryAppName = `secondary-app-${Date.now()}`;
+        const secondaryApp = initializeApp(mainApp.options, secondaryAppName);
+        const secondaryAuth = getAuth(secondaryApp);
 
-        if (!authResult.uid) {
-            throw new Error(authResult.error || "Failed to create user in Firebase Auth.");
+        try {
+            const userCredential = await createUserWithEmailAndPassword(secondaryAuth, userData.email, userData.password);
+            const authUid = userCredential.user.uid;
+
+            const newUser: User = {
+                id: authUid,
+                name: userData.name,
+                email: userData.email,
+                role: userData.role,
+                avatarUrl: `https://picsum.photos/seed/${authUid}/40/40`
+            };
+    
+            const userDocRef = doc(firestore, "users", authUid);
+            setDocumentNonBlocking(userDocRef, newUser, {});
+          
+            toast({
+                title: "Success",
+                description: "A new user has been successfully created."
+            });
+
+        } catch (error: any) {
+            console.error("Error creating user:", error);
+            // Translate Firebase auth errors to user-friendly messages
+            let errorMessage = error.message || "An unknown error occurred during user creation.";
+            if (error.code === 'auth/email-already-in-use') {
+                errorMessage = "This email address is already in use by another account.";
+            } else if (error.code === 'auth/invalid-email') {
+                errorMessage = "The email address is not valid.";
+            } else if (error.code === 'auth/weak-password') {
+                errorMessage = "The password is too weak. It must be at least 6 characters long.";
+            }
+            throw new Error(errorMessage);
+        } finally {
+            // Clean up the secondary app instance
+            await deleteApp(secondaryApp);
         }
-
-        // 2. Create user in Firestore with the UID from Auth
-        const newUser: User = {
-            id: authResult.uid,
-            name: userData.name,
-            email: userData.email,
-            role: userData.role,
-            avatarUrl: `https://picsum.photos/seed/${authResult.uid}/40/40`
-        };
-
-        const userDocRef = doc(firestore, "users", authResult.uid);
-        setDocumentNonBlocking(userDocRef, newUser, {});
-      
-        toast({
-            title: "Success",
-            description: "A new user has been successfully created."
-        });
     }
   }
 
