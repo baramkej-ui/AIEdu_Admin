@@ -44,29 +44,116 @@ import { UserForm } from "@/components/user-form";
 import { useToast } from '@/hooks/use-toast';
 import { createFirebaseAuthUser } from '@/ai/flows/create-firebase-auth-user';
 
+const roleLabels: Record<UserRole, string> = {
+  admin: 'Admins',
+  teacher: 'Teachers',
+  student: 'Students',
+};
 
-export default function StudentsPage() {
+const UserTable = ({
+  role,
+  onAddUser,
+  onEditUser,
+  onDeleteUser,
+}: {
+  role: UserRole;
+  onAddUser: (role: UserRole) => void;
+  onEditUser: (user: User) => void;
+  onDeleteUser: (user: User) => void;
+}) => {
   const firestore = useFirestore();
   const { user: authUser } = useUser();
-  const { toast } = useToast();
-  const [activeTab, setActiveTab] = React.useState<UserRole>("admin");
 
   const usersQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    return query(collection(firestore, 'users'), where('role', '==', activeTab));
-  }, [firestore, activeTab]);
+    return query(collection(firestore, 'users'), where('role', '==', role));
+  }, [firestore, role]);
 
   const { data: users, isLoading } = useCollection<User>(usersQuery);
+
+  const getInitials = (name: string) => {
+    return name?.split(' ').map(n => n[0]).join('').toUpperCase() || '';
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex justify-between items-center">
+            <div>
+                <CardTitle>{roleLabels[role]} List</CardTitle>
+                <CardDescription>There are a total of {users?.length ?? 0} {roleLabels[role].toLowerCase()}.</CardDescription>
+            </div>
+            {authUser?.uid && <Button onClick={() => onAddUser(role)}><PlusCircle className="mr-2"/>Add {roleLabels[role]}</Button>}
+        </div>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="flex justify-center items-center h-40">
+            <Loader2 className="h-8 w-8 animate-spin" />
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead className="hidden md:table-cell">Email</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {users?.map((user) => (
+                <TableRow key={user.id}>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <Avatar>
+                        <AvatarImage src={user.avatarUrl} alt={user.name} />
+                        <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+                      </Avatar>
+                      <span className="font-medium">{user.name}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell">{user.email}</TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                          <span className="sr-only">Open menu</span>
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => onEditUser(user)}>
+                          <Pencil className="mr-2 h-4 w-4" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => onDeleteUser(user)} className="text-destructive focus:text-destructive">
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
+
+export default function StudentsPage() {
+  const firestore = useFirestore();
+  const { toast } = useToast();
+  const [activeTab, setActiveTab] = React.useState<UserRole>("admin");
 
   const [isAlertOpen, setIsAlertOpen] = React.useState(false);
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [userToEdit, setUserToEdit] = React.useState<User | undefined>(undefined);
   const [userToDelete, setUserToDelete] = React.useState<User | null>(null);
   const [defaultRole, setDefaultRole] = React.useState<UserRole>('admin');
-
-  const getInitials = (name: string) => {
-    return name?.split(' ').map(n => n[0]).join('').toUpperCase() || '';
-  }
 
   const handleAddUser = (role: UserRole) => {
     setUserToEdit(undefined);
@@ -144,87 +231,6 @@ export default function StudentsPage() {
     setUserToDelete(null);
   }
 
-  const roleLabels: Record<UserRole, string> = {
-    admin: 'Admins',
-    teacher: 'Teachers',
-    student: 'Students',
-  };
-
-  const UserTable = ({
-    users,
-    role,
-    isLoading,
-  }: {
-    users: User[] | null;
-    role: UserRole;
-    isLoading: boolean;
-  }) => (
-    <Card>
-      <CardHeader>
-        <div className="flex justify-between items-center">
-            <div>
-                <CardTitle>{roleLabels[role]} List</CardTitle>
-                <CardDescription>There are a total of {users?.length ?? 0} {roleLabels[role].toLowerCase()}.</CardDescription>
-            </div>
-            {authUser?.uid && <Button onClick={() => handleAddUser(role)}><PlusCircle className="mr-2"/>Add {roleLabels[role]}</Button>}
-        </div>
-      </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <div className="flex justify-center items-center h-40">
-            <Loader2 className="h-8 w-8 animate-spin" />
-          </div>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead className="hidden md:table-cell">Email</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {users?.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <Avatar>
-                        <AvatarImage src={user.avatarUrl} alt={user.name} />
-                        <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
-                      </Avatar>
-                      <span className="font-medium">{user.name}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell">{user.email}</TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                          <span className="sr-only">Open menu</span>
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleEditUser(user)}>
-                          <Pencil className="mr-2 h-4 w-4" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => openDeleteDialog(user)} className="text-destructive focus:text-destructive">
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </CardContent>
-    </Card>
-  );
-
   return (
     <ProtectedPage allowedRoles={["admin", "teacher"]}>
       <PageHeader
@@ -238,13 +244,28 @@ export default function StudentsPage() {
           <TabsTrigger value="student">Students</TabsTrigger>
         </TabsList>
         <TabsContent value="admin" className="mt-4">
-          <UserTable users={users} role="admin" isLoading={isLoading} />
+          <UserTable
+            role="admin"
+            onAddUser={handleAddUser}
+            onEditUser={handleEditUser}
+            onDeleteUser={openDeleteDialog}
+          />
         </TabsContent>
         <TabsContent value="teacher" className="mt-4">
-          <UserTable users={users} role="teacher" isLoading={isLoading} />
+          <UserTable
+            role="teacher"
+            onAddUser={handleAddUser}
+            onEditUser={handleEditUser}
+            onDeleteUser={openDeleteDialog}
+          />
         </TabsContent>
         <TabsContent value="student" className="mt-4">
-          <UserTable users={users} role="student" isLoading={isLoading} />
+          <UserTable
+            role="student"
+            onAddUser={handleAddUser}
+            onEditUser={handleEditUser}
+            onDeleteUser={openDeleteDialog}
+          />
         </TabsContent>
       </Tabs>
       
