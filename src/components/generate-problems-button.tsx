@@ -46,15 +46,15 @@ export function GenerateProblemsButton() {
       setGeneratedProblems(result);
       setIsOpen(true);
       toast({
-        title: '문제 생성 완료',
-        description: `${result.problems.length}개의 새로운 문제가 생성되었습니다.`,
+        title: 'Problem Generation Complete',
+        description: `${result.problems.length} new problems have been generated.`,
       });
     } catch (error) {
       console.error(error);
       toast({
         variant: 'destructive',
-        title: '문제 생성 실패',
-        description: 'AI 문제 생성 중 오류가 발생했습니다.',
+        title: 'Problem Generation Failed',
+        description: 'An error occurred during AI problem generation.',
       });
     } finally {
       setIsLoading(false);
@@ -69,15 +69,15 @@ export function GenerateProblemsButton() {
         ) : (
           <Sparkles className="mr-2 h-4 w-4" />
         )}
-        AI로 문제 생성
+        Generate with AI
       </Button>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>AI가 생성한 문제</DialogTitle>
+            <DialogTitle>AI-Generated Problems</DialogTitle>
             <DialogDescription>
-              아래 문제를 검토하고 퀴즈에 추가하세요.
+              Review the problems below and add them to the quiz.
             </DialogDescription>
           </DialogHeader>
           <div className="max-h-[60vh] overflow-y-auto p-1">
@@ -92,13 +92,13 @@ export function GenerateProblemsButton() {
                   </AccordionTrigger>
                   <AccordionContent>
                     <div className="space-y-2">
-                      <p className="font-semibold">옵션:</p>
+                      <p className="font-semibold">Options:</p>
                       <ul className="list-disc space-y-1 pl-5">
                         {problem.options.map((option, i) => (
                           <li key={i}>{option}</li>
                         ))}
                       </ul>
-                      <p className="font-semibold pt-2">정답:</p>
+                      <p className="font-semibold pt-2">Answer:</p>
                       <p>{problem.answer}</p>
                     </div>
                   </AccordionContent>
@@ -108,13 +108,13 @@ export function GenerateProblemsButton() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsOpen(false)}>
-              닫기
+              Close
             </Button>
             <Button onClick={() => {
-                toast({ title: "성공!", description: "선택된 문제가 퀴즈에 추가되었습니다." });
+                toast({ title: "Success!", description: "Selected problems have been added to the quiz." });
                 setIsOpen(false);
             }}>
-              퀴즈에 추가
+              Add to Quiz
             </Button>
           </DialogFooter>
         </DialogContent>

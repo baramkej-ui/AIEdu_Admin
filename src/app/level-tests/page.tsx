@@ -24,8 +24,8 @@ export default function LevelTestsPage() {
   return (
     <ProtectedPage allowedRoles={["admin", "teacher"]}>
       <PageHeader
-        title="레벨테스트 관리"
-        description="관리할 레벨테스트 유형을 선택하세요."
+        title="Level Test Management"
+        description="Select the level test type to manage."
       />
       <Card>
         <CardContent className="pt-6">

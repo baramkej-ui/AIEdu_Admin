@@ -24,17 +24,17 @@ import type { User, Problem } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const chartData = [
-  { month: "1월", users: 186 },
-  { month: "2월", users: 305 },
-  { month: "3월", users: 237 },
-  { month: "4월", users: 73 },
-  { month: "5월", users: 209 },
-  { month: "6월", users: 214 },
+  { month: "Jan", users: 186 },
+  { month: "Feb", users: 305 },
+  { month: "Mar", users: 237 },
+  { month: "Apr", users: 73 },
+  { month: "May", users: 209 },
+  { month: "Jun", users: 214 },
 ];
 
 const chartConfig = {
   users: {
-    label: "신규 사용자",
+    label: "New Users",
     color: "hsl(var(--primary))",
   },
 } satisfies ChartConfig;
@@ -63,55 +63,55 @@ export default function DashboardPage() {
   return (
     <ProtectedPage allowedRoles={["admin"]}>
       <PageHeader
-        title="대시보드"
-        description="EduQuiz 플랫폼의 개요입니다."
+        title="Dashboard"
+        description="Overview of the EduQuiz platform."
       />
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">총 사용자</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             {isLoading ? <Skeleton className="h-8 w-16"/> : <div className="text-2xl font-bold">{totalUsers}</div>}
             <p className="text-xs text-muted-foreground">
-              플랫폼의 모든 역할 포함
+              All roles on the platform included
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">총 문제 수</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Problems</CardTitle>
             <BookOpen className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             {isLoading ? <Skeleton className="h-8 w-16"/> : <div className="text-2xl font-bold">{totalProblems}</div>}
             <p className="text-xs text-muted-foreground">
-              생성된 모든 문제
+              All problems created
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">교사 수</CardTitle>
+            <CardTitle className="text-sm font-medium">Number of Teachers</CardTitle>
             <UserCheck className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             {isLoading ? <Skeleton className="h-8 w-16"/> : <div className="text-2xl font-bold">{totalTeachers}</div>}
             <p className="text-xs text-muted-foreground">
-              활성 교사 계정
+              Active teacher accounts
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">학생 수</CardTitle>
+            <CardTitle className="text-sm font-medium">Number of Students</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             {isLoading ? <Skeleton className="h-8 w-16"/> : <div className="text-2xl font-bold">{totalStudents}</div>}
             <p className="text-xs text-muted-foreground">
-              활성 학생 계정
+              Active student accounts
             </p>
           </CardContent>
         </Card>
@@ -120,8 +120,8 @@ export default function DashboardPage() {
       <div className="mt-6">
         <Card>
             <CardHeader>
-                <CardTitle className="flex items-center gap-2"><BarChart className="h-5 w-5"/> 월별 사용자 활동</CardTitle>
-                <CardDescription>지난 6개월간의 신규 사용자 가입 현황입니다.</CardDescription>
+                <CardTitle className="flex items-center gap-2"><BarChart className="h-5 w-5"/> Monthly User Activity</CardTitle>
+                <CardDescription>New user sign-ups over the last 6 months.</CardDescription>
             </CardHeader>
             <CardContent>
               {isLoading ? <Skeleton className="h-[300px] w-full" /> : (

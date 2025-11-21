@@ -17,15 +17,15 @@ import {
 
 const navItems = {
   admin: [
-    { href: '/dashboard', label: '대시보드', icon: LayoutDashboard },
-    { href: '/level-tests', label: '레벨테스트 관리', icon: ClipboardList },
-    { href: '/problems', label: '학습 관리', icon: BookOpen },
-    { href: '/students', label: '구성원 관리', icon: Users },
+    { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/level-tests', label: 'Level Tests', icon: ClipboardList },
+    { href: '/problems', label: 'Learning Mgmt', icon: BookOpen },
+    { href: '/students', label: 'Members', icon: Users },
   ],
   teacher: [
-    { href: '/students', label: '구성원 관리', icon: Users },
-    { href: '/problems', label: '학습 관리', icon: BookOpen },
-    { href: '/level-tests', label: '레벨테스트 관리', icon: ClipboardList },
+    { href: '/students', label: 'Members', icon: Users },
+    { href: '/problems', label: 'Learning Mgmt', icon: BookOpen },
+    { href: '/level-tests', label: 'Level Tests', icon: ClipboardList },
   ],
   student: [], // Student nav items are removed
 };

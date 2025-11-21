@@ -24,8 +24,8 @@ import { doc, getDoc } from 'firebase/firestore';
 import type { UserRole, User } from '@/lib/types';
 
 const formSchema = z.object({
-  email: z.string().min(1, '이메일을 입력해주세요.').email({ message: '유효한 이메일을 입력해주세요.' }),
-  password: z.string().min(1, '비밀번호를 입력해주세요.'),
+  email: z.string().min(1, 'Please enter your email.').email({ message: 'Please enter a valid email.' }),
+  password: z.string().min(1, 'Please enter your password.'),
 });
 
 
@@ -59,8 +59,8 @@ export function AuthForm({ type }: AuthFormProps) {
     if (!auth || !firestore) {
         toast({
             variant: "destructive",
-            title: "오류",
-            description: "Firebase가 초기화되지 않았습니다. 잠시 후 다시 시도해주세요."
+            title: "Error",
+            description: "Firebase is not initialized. Please try again later."
         });
         setIsLoading(false);
         return;
@@ -80,28 +80,28 @@ export function AuthForm({ type }: AuthFormProps) {
             await auth.signOut();
             toast({
               variant: 'destructive',
-              title: '로그인 실패',
-              description: '관리자 계정으로만 로그인할 수 있습니다.',
+              title: 'Login Failed',
+              description: 'Only admin accounts can log in.',
             });
           } else {
-            toast({ title: "로그인 성공", description: "대시보드로 이동합니다." });
+            toast({ title: "Login Successful", description: "Redirecting to dashboard..." });
             router.push(roleRedirects[userData.role]);
           }
       } else {
           await auth.signOut();
-          throw new Error("사용자 역할 정보를 찾을 수 없습니다.");
+          throw new Error("User role information not found.");
       }
     } catch (error: any) {
         const errorCode = error.code;
-        let errorMessage = "오류가 발생했습니다.";
+        let errorMessage = "An error occurred.";
         if (errorCode === 'auth/user-not-found' || errorCode === 'auth/wrong-password' || errorCode === 'auth/invalid-credential') {
-          errorMessage = '이메일 또는 비밀번호가 잘못되었습니다.';
+          errorMessage = 'Incorrect email or password.';
         } else {
             errorMessage = error.message;
         }
         toast({
           variant: 'destructive',
-          title: '인증 실패',
+          title: 'Authentication Failed',
           description: errorMessage,
         });
     } finally {
@@ -117,7 +117,7 @@ export function AuthForm({ type }: AuthFormProps) {
           name="email"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>이메일</FormLabel>
+              <FormLabel>Email</FormLabel>
               <FormControl>
                 <Input placeholder="name@example.com" {...field} />
               </FormControl>
@@ -130,7 +130,7 @@ export function AuthForm({ type }: AuthFormProps) {
           name="password"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>비밀번호</FormLabel>
+              <FormLabel>Password</FormLabel>
               <FormControl>
                 <Input type="password" placeholder="••••••••" {...field} />
               </FormControl>
@@ -140,12 +140,12 @@ export function AuthForm({ type }: AuthFormProps) {
         />
         <Button type="submit" className="w-full" disabled={isLoading}>
           {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          로그인
+          Log In
         </Button>
       </form>
       <p className="mt-4 text-center text-sm text-muted-foreground">
-        계정이 없으신가요?{' '}
-        <span className="text-muted-foreground/50">(관리자에게 문의)</span>
+        Don't have an account?{' '}
+        <span className="text-muted-foreground/50">(Contact an administrator)</span>
       </p>
     </Form>
   );

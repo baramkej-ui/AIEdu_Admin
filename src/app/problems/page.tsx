@@ -46,8 +46,8 @@ export default function ProblemsPage() {
     return (
       <>
         <PageHeader
-          title="학습 관리"
-          description="관리할 학습 유형을 선택하세요."
+          title="Learning Management"
+          description="Select the learning type to manage."
         />
         <Card>
           <CardContent className="pt-6">

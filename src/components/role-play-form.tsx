@@ -30,8 +30,8 @@ import {
 } from '@/components/ui/dialog';
 
 const formSchema = z.object({
-    place: z.string().min(1, '장소를 입력해주세요.'),
-    situation: z.string().min(1, '상황을 입력해주세요.'),
+    place: z.string().min(1, 'Place is required.'),
+    situation: z.string().min(1, 'Situation is required.'),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -75,8 +75,8 @@ export function RolePlayForm({ scenario, onSave, isOpen, setIsOpen }: RolePlayFo
     } catch (error: any) {
         toast({
             variant: "destructive",
-            title: "저장 실패",
-            description: error.message || "상황을 저장하는 중 오류가 발생했습니다."
+            title: "Save Failed",
+            description: error.message || "An error occurred while saving the scenario."
         });
     } finally {
       setIsLoading(false);
@@ -87,9 +87,9 @@ export function RolePlayForm({ scenario, onSave, isOpen, setIsOpen }: RolePlayFo
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>{isEditing ? '상황 수정' : '새로운 상황 추가'}</DialogTitle>
+          <DialogTitle>{isEditing ? 'Edit Scenario' : 'Add New Scenario'}</DialogTitle>
           <DialogDescription>
-            {isEditing ? '상황의 세부 정보를 수정합니다.' : '새로운 Role-Play 상황의 정보를 입력해주세요.'}
+            {isEditing ? 'Modify the details of the scenario.' : 'Enter the information for the new Role-Play scenario.'}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -99,9 +99,9 @@ export function RolePlayForm({ scenario, onSave, isOpen, setIsOpen }: RolePlayFo
               name="place"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>장소</FormLabel>
+                  <FormLabel>Place</FormLabel>
                   <FormControl>
-                    <Input placeholder="예: 레스토랑, 공항" {...field} />
+                    <Input placeholder="e.g., Restaurant, Airport" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -112,9 +112,9 @@ export function RolePlayForm({ scenario, onSave, isOpen, setIsOpen }: RolePlayFo
               name="situation"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>상황</FormLabel>
+                  <FormLabel>Situation</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="예: 음식에 머리카락이 나왔을 때 점원에게 항의하는 상황" {...field} rows={5} />
+                    <Textarea placeholder="e.g., A situation where you complain to the staff because you found a hair in your food." {...field} rows={5} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -122,11 +122,11 @@ export function RolePlayForm({ scenario, onSave, isOpen, setIsOpen }: RolePlayFo
             />
             <DialogFooter className="pt-4">
               <DialogClose asChild>
-                <Button type="button" variant="outline">취소</Button>
+                <Button type="button" variant="outline">Cancel</Button>
               </DialogClose>
               <Button type="submit" disabled={isLoading}>
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                저장
+                Save
               </Button>
             </DialogFooter>
           </form>

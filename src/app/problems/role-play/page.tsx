@@ -68,7 +68,7 @@ export default function RolePlayPage() {
   
   const handleSaveScenario = async (scenarioData: Omit<RolePlayScenario, 'id'>, id?: string) => {
     if (!firestore) {
-      toast({ variant: 'destructive', title: "오류", description: "데이터베이스 서비스를 사용할 수 없습니다." });
+      toast({ variant: 'destructive', title: "Error", description: "Database service is not available." });
       return;
     }
     
@@ -78,8 +78,8 @@ export default function RolePlayPage() {
     setDocumentNonBlocking(docRef, scenarioData, { merge: true });
 
     toast({
-        title: "성공",
-        description: "상황 정보가 성공적으로 저장되었습니다."
+        title: "Success",
+        description: "The scenario has been saved successfully."
     });
   }
 
@@ -93,8 +93,8 @@ export default function RolePlayPage() {
       const docRef = doc(firestore, 'rolePlayScenarios', scenarioToDelete);
       deleteDocumentNonBlocking(docRef);
       toast({
-          title: "삭제 완료",
-          description: "상황이 삭제되었습니다.",
+          title: "Deletion Complete",
+          description: "The scenario has been deleted.",
       });
       setScenarioToDelete(null);
     }
@@ -104,16 +104,16 @@ export default function RolePlayPage() {
   return (
     <ProtectedPage allowedRoles={["admin", "teacher"]}>
       <PageHeader
-        title="Role-Play 상황 관리"
-        description="학생들이 연습할 Role-Play 상황을 관리합니다."
+        title="Role-Play Scenario Management"
+        description="Manage the Role-Play scenarios for students to practice."
       >
-        <Button onClick={handleAddScenario}><PlusCircle className="mr-2"/>새로운 상황 추가</Button>
+        <Button onClick={handleAddScenario}><PlusCircle className="mr-2"/>Add New Scenario</Button>
       </PageHeader>
       
       <Card>
         <CardHeader>
-          <CardTitle>상황 목록</CardTitle>
-          <CardDescription>총 {scenarios?.length ?? 0}개의 상황이 있습니다.</CardDescription>
+          <CardTitle>Scenario List</CardTitle>
+          <CardDescription>There are a total of {scenarios?.length ?? 0} scenarios.</CardDescription>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -124,9 +124,9 @@ export default function RolePlayPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>장소</TableHead>
-                  <TableHead>상황</TableHead>
-                  <TableHead className="text-right">액션</TableHead>
+                  <TableHead>Place</TableHead>
+                  <TableHead>Situation</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -138,18 +138,18 @@ export default function RolePlayPage() {
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">메뉴 열기</span>
+                            <span className="sr-only">Open menu</span>
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => handleEditScenario(scenario)}>
                             <Pencil className="mr-2 h-4 w-4" />
-                            수정
+                            Edit
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => openDeleteDialog(scenario.id)} className="text-destructive focus:text-destructive">
                             <Trash2 className="mr-2 h-4 w-4" />
-                            삭제
+                            Delete
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -172,14 +172,14 @@ export default function RolePlayPage() {
       <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>정말로 이 상황을 삭제하시겠습니까?</AlertDialogTitle>
+            <AlertDialogTitle>Are you sure you want to delete this scenario?</AlertDialogTitle>
             <AlertDialogDescription>
-              이 작업은 되돌릴 수 없습니다. 상황 데이터가 영구적으로 삭제됩니다.
+              This action cannot be undone. The scenario data will be permanently deleted.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>취소</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">삭제</AlertDialogAction>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

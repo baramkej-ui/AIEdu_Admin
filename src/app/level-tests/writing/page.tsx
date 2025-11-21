@@ -91,8 +91,8 @@ export default function WritingTestPage() {
     if (isNaN(timeValue) || timeValue < 0) {
         toast({
             variant: 'destructive',
-            title: "입력 오류",
-            description: "유효한 시간을 선택해주세요."
+            title: "Input Error",
+            description: "Please select a valid time."
         });
         return;
     }
@@ -108,8 +108,8 @@ export default function WritingTestPage() {
     }
 
     toast({
-        title: "저장 완료",
-        description: `시험 시간이 ${timeValue}분으로 설정되었습니다.`
+        title: "Save Complete",
+        description: `The test duration has been set to ${timeValue} minutes.`
     });
     setIsSaving(false);
   };
@@ -128,8 +128,8 @@ export default function WritingTestPage() {
     }
 
     toast({
-      title: "성공",
-      description: "문제가 성공적으로 저장되었습니다.",
+      title: "Success",
+      description: "The problem has been saved successfully.",
     });
   };
 
@@ -154,8 +154,8 @@ export default function WritingTestPage() {
         setDocumentNonBlocking(testDocRef, { problemIds: arrayRemove(problemToDelete) }, { merge: true });
       
         toast({
-            title: "삭제 완료",
-            description: "테스트에서 문제가 제거되었습니다.",
+            title: "Deletion Complete",
+            description: "The problem has been removed from the test.",
         });
         setProblemToDelete(null);
     }
@@ -164,13 +164,13 @@ export default function WritingTestPage() {
 
   const getProblemTypeDescription = (problem: Problem) => {
     if (problem.type === 'multiple-choice') {
-      return `객관식 / ${problem.options?.length ?? 0}지선다`;
+      return `Multiple Choice / ${problem.options?.length ?? 0} options`;
     }
     if (problem.type === 'subjective') {
-      if (problem.subType === 'short-answer') return '주관식 / 단답형';
-      if (problem.subType === 'descriptive') return '주관식 / 서술형';
+      if (problem.subType === 'short-answer') return 'Subjective / Short Answer';
+      if (problem.subType === 'descriptive') return 'Subjective / Descriptive';
     }
-    return '알 수 없음';
+    return 'Unknown';
   };
 
 
@@ -179,43 +179,43 @@ export default function WritingTestPage() {
   return (
     <ProtectedPage allowedRoles={["admin", "teacher"]}>
       <PageHeader
-        title="Writing 레벨테스트 설정"
-        description="시험 시간과 문제 목록을 관리합니다."
+        title="Writing Level Test Settings"
+        description="Manage the test duration and problem list."
       />
       <Card>
         <CardHeader>
-          <CardTitle>시험 시간 설정</CardTitle>
+          <CardTitle>Test Duration Settings</CardTitle>
           <CardDescription>
-            학생들이 Writing 레벨테스트를 완료해야 하는 전체 시간을 분 단위로 설정하세요.
+            Set the total time in minutes that students have to complete the Writing level test.
           </CardDescription>
         </CardHeader>
         <CardContent>
             {isDataLoading ? (
                 <div className="flex items-center space-x-2">
                     <Loader2 className="h-6 w-6 animate-spin" />
-                    <span>데이터를 불러오는 중입니다...</span>
+                    <span>Loading data...</span>
                 </div>
             ) : (
                 <div className="flex items-center space-x-2">
-                    <Label htmlFor="time-select" className="flex-shrink-0">전체 시간(분)</Label>
+                    <Label htmlFor="time-select" className="flex-shrink-0">Total Time (minutes)</Label>
                     <Select
                         value={selectedValue}
                         onValueChange={setSelectedValue}
                     >
                       <SelectTrigger id="time-select" className="w-[180px]">
-                        <SelectValue placeholder="시간 선택..." />
+                        <SelectValue placeholder="Select time..." />
                       </SelectTrigger>
                       <SelectContent>
                         {timeOptions.map(time => (
                           <SelectItem key={time} value={String(time)}>
-                            {time}분
+                            {time} minutes
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                     <Button onClick={handleTimeSave} disabled={isSaving}>
                         {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        저장
+                        Save
                     </Button>
                 </div>
             )}
@@ -225,14 +225,14 @@ export default function WritingTestPage() {
       <Card className="mt-6">
         <CardHeader className="flex-row items-center justify-between">
           <div>
-            <CardTitle>문제 목록</CardTitle>
+            <CardTitle>Problem List</CardTitle>
             <CardDescription>
-              Writing 레벨테스트에 포함될 문제입니다. 총 {testProblems.length}개의 문제가 있습니다.
+              Problems included in the Writing level test. There are {testProblems.length} problems in total.
             </CardDescription>
           </div>
           <Button onClick={handleCreate}>
               <PlusCircle className="mr-2 h-4 w-4" />
-              문제 추가
+              Add Problem
             </Button>
         </CardHeader>
         <CardContent>
@@ -244,10 +244,10 @@ export default function WritingTestPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[50px]">번호</TableHead>
-                  <TableHead>문제</TableHead>
-                  <TableHead>유형</TableHead>
-                  <TableHead className="text-right">액션</TableHead>
+                  <TableHead className="w-[50px]">No.</TableHead>
+                  <TableHead>Problem</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -260,18 +260,18 @@ export default function WritingTestPage() {
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">메뉴 열기</span>
+                            <span className="sr-only">Open menu</span>
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => handleEdit(problem)}>
                             <Pencil className="mr-2 h-4 w-4" />
-                            수정
+                            Edit
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => openDeleteDialog(problem.id)} className="text-destructive focus:text-destructive">
                             <Trash2 className="mr-2 h-4 w-4" />
-                            삭제
+                            Delete
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -294,14 +294,14 @@ export default function WritingTestPage() {
       <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>정말로 이 테스트에서 문제를 제거하시겠습니까?</AlertDialogTitle>
+            <AlertDialogTitle>Are you sure you want to remove this problem from the test?</AlertDialogTitle>
             <AlertDialogDescription>
-              이 작업은 되돌릴 수 없습니다. 이 문제는 테스트에서만 제거되며, 전체 문제 목록에서는 삭제되지 않습니다.
+              This action cannot be undone. This will only remove the problem from the test, not delete it from the overall problem list.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>취소</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">삭제</AlertDialogAction>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

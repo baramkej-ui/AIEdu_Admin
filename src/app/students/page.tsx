@@ -81,7 +81,7 @@ export default function StudentsPage() {
   
   const handleSaveUser = async (userData: any, id?: string) => {
     if (!firestore) {
-      toast({ variant: 'destructive', title: "오류", description: "데이터베이스 서비스를 사용할 수 없습니다." });
+      toast({ variant: 'destructive', title: "Error", description: "Database service is not available." });
       return;
     }
     
@@ -92,20 +92,20 @@ export default function StudentsPage() {
       // Note: Password/email updates in Auth for existing users would require re-authentication and is complex for this flow.
       // For now, we only update Firestore data.
       toast({
-          title: "성공",
-          description: "사용자 정보가 성공적으로 업데이트되었습니다."
+          title: "Success",
+          description: "User information has been successfully updated."
       });
 
     } else { // Creating new user
         if (!userData.password) {
-            throw new Error("새 사용자에게는 비밀번호가 필요합니다.");
+            throw new Error("Password is required for a new user.");
         }
         
         // 1. Create user in Firebase Auth via Genkit Flow
         const authResult = await createFirebaseAuthUser({ email: userData.email, password: userData.password });
 
         if (!authResult.uid) {
-            throw new Error(authResult.error || "Firebase Auth에서 사용자 생성에 실패했습니다.");
+            throw new Error(authResult.error || "Failed to create user in Firebase Auth.");
         }
 
         // 2. Create user in Firestore with the UID from Auth
@@ -121,8 +121,8 @@ export default function StudentsPage() {
         setDocumentNonBlocking(userDocRef, newUser, {});
       
         toast({
-            title: "성공",
-            description: "새로운 사용자가 성공적으로 생성되었습니다."
+            title: "Success",
+            description: "A new user has been successfully created."
         });
     }
   }
@@ -137,17 +137,17 @@ export default function StudentsPage() {
     // For now, it only closes the dialog.
     console.log("Deleting user (simulation):", userToDelete?.id);
     toast({
-        title: "삭제 시뮬레이션",
-        description: "실제 삭제는 백엔드 기능이 필요합니다.",
+        title: "Delete Simulation",
+        description: "Actual deletion requires a backend function.",
     });
     setIsAlertOpen(false);
     setUserToDelete(null);
   }
 
   const roleLabels: Record<UserRole, string> = {
-    admin: '관리자',
-    teacher: '교사',
-    student: '학생',
+    admin: 'Admins',
+    teacher: 'Teachers',
+    student: 'Students',
   };
 
   const UserTable = ({
@@ -163,10 +163,10 @@ export default function StudentsPage() {
       <CardHeader>
         <div className="flex justify-between items-center">
             <div>
-                <CardTitle>{roleLabels[role]} 목록</CardTitle>
-                <CardDescription>총 {users?.length ?? 0}명의 {roleLabels[role]}가 있습니다.</CardDescription>
+                <CardTitle>{roleLabels[role]} List</CardTitle>
+                <CardDescription>There are a total of {users?.length ?? 0} {roleLabels[role].toLowerCase()}.</CardDescription>
             </div>
-            {authUser?.uid && <Button onClick={() => handleAddUser(role)}><PlusCircle className="mr-2"/>{roleLabels[role]} 추가</Button>}
+            {authUser?.uid && <Button onClick={() => handleAddUser(role)}><PlusCircle className="mr-2"/>Add {roleLabels[role]}</Button>}
         </div>
       </CardHeader>
       <CardContent>
@@ -178,9 +178,9 @@ export default function StudentsPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>이름</TableHead>
-                <TableHead className="hidden md:table-cell">이메일</TableHead>
-                <TableHead className="text-right">액션</TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead className="hidden md:table-cell">Email</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -200,18 +200,18 @@ export default function StudentsPage() {
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" className="h-8 w-8 p-0">
-                          <span className="sr-only">메뉴 열기</span>
+                          <span className="sr-only">Open menu</span>
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => handleEditUser(user)}>
                           <Pencil className="mr-2 h-4 w-4" />
-                          수정
+                          Edit
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => openDeleteDialog(user)} className="text-destructive focus:text-destructive">
                           <Trash2 className="mr-2 h-4 w-4" />
-                          삭제
+                          Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -228,14 +228,14 @@ export default function StudentsPage() {
   return (
     <ProtectedPage allowedRoles={["admin", "teacher"]}>
       <PageHeader
-        title="구성원 관리"
-        description="역할별 사용자 목록을 보고 관리하세요."
+        title="Member Management"
+        description="View and manage users by role."
       />
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as UserRole)}>
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="admin">관리자</TabsTrigger>
-          <TabsTrigger value="teacher">교사</TabsTrigger>
-          <TabsTrigger value="student">학생</TabsTrigger>
+          <TabsTrigger value="admin">Admins</TabsTrigger>
+          <TabsTrigger value="teacher">Teachers</TabsTrigger>
+          <TabsTrigger value="student">Students</TabsTrigger>
         </TabsList>
         <TabsContent value="admin" className="mt-4">
           <UserTable users={users} role="admin" isLoading={isLoading} />
@@ -259,14 +259,14 @@ export default function StudentsPage() {
       <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>정말로 이 사용자를 삭제하시겠습니까?</AlertDialogTitle>
+            <AlertDialogTitle>Are you sure you want to delete this user?</AlertDialogTitle>
             <AlertDialogDescription>
-              이 작업은 되돌릴 수 없습니다. 사용자 데이터가 영구적으로 삭제됩니다.
+              This action cannot be undone. The user's data will be permanently deleted.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>취소</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">삭제</AlertDialogAction>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

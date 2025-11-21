@@ -41,15 +41,15 @@ import { Label } from './ui/label';
 
 const problemSchema = z
   .object({
-    number: z.coerce.number({ required_error: '문제 번호를 입력해주세요.' }).min(1, '문제 번호는 1 이상이어야 합니다.'),
-    question: z.string().min(1, '질문은 최소 1자 이상이어야 합니다.'),
+    number: z.coerce.number({ required_error: 'Problem number is required.' }).min(1, 'Problem number must be at least 1.'),
+    question: z.string().min(1, 'Question must be at least 1 character long.'),
     question2: z.string().optional(),
     type: z.enum(['multiple-choice', 'subjective']).default('multiple-choice'),
     subType: z.enum(['short-answer', 'descriptive']).default('short-answer'),
     options: z
       .array(
         z.object({
-          value: z.string().min(1, '보기 내용을 입력해주세요.'),
+          value: z.string().min(1, 'Option content is required.'),
         })
       )
       .optional(),
@@ -67,7 +67,7 @@ const problemSchema = z
       return true;
     },
     {
-      message: '객관식 문제는 최소 2개 이상의 보기와 정답이 필요합니다.',
+      message: 'Multiple choice questions require at least 2 options and a selected answer.',
       path: ['answer'],
     }
   )
@@ -79,7 +79,7 @@ const problemSchema = z
       return true;
     },
     {
-      message: '단답형 문제는 정답을 반드시 입력해야 합니다.',
+      message: 'Short answer questions require an answer to be provided.',
       path: ['answer'],
     }
   );
@@ -138,17 +138,19 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
   
   React.useEffect(() => {
     if (isOpen) {
-      form.reset({
-        number: 1,
-        question: '',
-        question2: '',
-        type: 'multiple-choice',
-        subType: 'short-answer',
-        options: Array.from({ length: 4 }, () => ({ value: '' })),
-        answer: '',
-        grading: 'ai',
-        gradingCriteria: '',
-      });
+      const resetToNew = () => {
+        form.reset({
+          number: 1,
+          question: '',
+          question2: '',
+          type: 'multiple-choice',
+          subType: 'short-answer',
+          options: Array.from({ length: 4 }, () => ({ value: '' })),
+          answer: '',
+          grading: 'ai',
+          gradingCriteria: '',
+        });
+      };
       
       if (problem) {
         const optionsAsObjects = problem.options?.map(opt => ({ value: opt })) || [];
@@ -166,11 +168,11 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
         });
 
       } else {
-         // This makes sure that on creating a new problem, it defaults to 4 options
-         form.setValue('options', Array.from({ length: 4 }, () => ({ value: '' })))
+         resetToNew();
       }
     }
-  }, [isOpen, problem, form]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, problem]);
 
 
   async function onSubmit(values: ProblemFormData) {
@@ -189,7 +191,7 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
     } catch (error) {
       toast({
         variant: 'destructive',
-        title: '저장 실패',
+        title: 'Save Failed',
         description: (error as Error).message,
       });
     } finally {
@@ -201,9 +203,9 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogContent className="max-w-3xl">
         <DialogHeader>
-          <DialogTitle>{problem ? '문제 수정' : '새 문제 생성'}</DialogTitle>
+          <DialogTitle>{problem ? 'Edit Problem' : 'Create New Problem'}</DialogTitle>
           <DialogDescription>
-            퀴즈에 사용될 문제를 입력해주세요.
+            Enter the details for the quiz problem.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -213,7 +215,7 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
               name="number"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>문제 번호</FormLabel>
+                  <FormLabel>Problem Number</FormLabel>
                   <FormControl>
                     <Input type="number" placeholder="1" {...field} />
                   </FormControl>
@@ -227,9 +229,9 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
               name="question"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>문제 1 (필수)</FormLabel>
+                  <FormLabel>Question 1 (Required)</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="학생에게 제시될 주된 질문을 입력하세요." {...field} rows={3}/>
+                    <Textarea placeholder="Enter the main question to be presented to the student." {...field} rows={3}/>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -240,9 +242,9 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
               name="question2"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>문제 2 (선택)</FormLabel>
+                  <FormLabel>Question 2 (Optional)</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="필요한 경우, 추가 안내문이나 보조 질문을 입력하세요." {...field} rows={3} />
+                    <Textarea placeholder="Enter any additional instructions or supplementary questions if needed." {...field} rows={3} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -254,14 +256,15 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
               name="type"
               render={({ field }) => (
                 <FormItem className="space-y-3">
-                  <FormLabel>문제 유형</FormLabel>
+                  <FormLabel>Problem Type</FormLabel>
                   <FormControl>
                     <RadioGroup
                       onValueChange={(value) => {
+                        const currentValues = form.getValues();
                         field.onChange(value)
                         form.setValue('answer', '');
                         if (value === 'multiple-choice') {
-                          handleOptionCountChange(4);
+                          handleOptionCountChange(currentValues.options?.length || 4);
                         } else {
                           // Clear options when switching to subjective
                           handleOptionCountChange(0);
@@ -274,13 +277,13 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
                         <FormControl>
                           <RadioGroupItem value="multiple-choice" />
                         </FormControl>
-                        <FormLabel className="font-normal">객관식</FormLabel>
+                        <FormLabel className="font-normal">Multiple Choice</FormLabel>
                       </FormItem>
                       <FormItem className="flex items-center space-x-2 space-y-0">
                         <FormControl>
                           <RadioGroupItem value="subjective" />
                         </FormControl>
-                        <FormLabel className="font-normal">주관식</FormLabel>
+                        <FormLabel className="font-normal">Subjective</FormLabel>
                       </FormItem>
                     </RadioGroup>
                   </FormControl>
@@ -293,7 +296,7 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
               <Card className="p-4 bg-muted/30">
                 <CardContent className="p-0 space-y-4">
                   <div className="space-y-2">
-                    <Label>보기 개수</Label>
+                    <Label>Number of Options</Label>
                     <Select
                       value={String(optionCount)}
                       onValueChange={(val) => handleOptionCountChange(Number(val))}
@@ -303,7 +306,7 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
                       </SelectTrigger>
                       <SelectContent>
                         {[2, 3, 4, 5, 6, 7, 8].map(num => (
-                          <SelectItem key={num} value={String(num)}>{num}개</SelectItem>
+                          <SelectItem key={num} value={String(num)}>{num} options</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -313,7 +316,7 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
                     name="answer"
                     render={({ field }) => (
                       <FormItem className="space-y-3">
-                        <FormLabel>보기 및 정답 설정</FormLabel>
+                        <FormLabel>Options & Correct Answer</FormLabel>
                         <FormControl>
                           <RadioGroup
                             onValueChange={field.onChange}
@@ -329,13 +332,13 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
                                   <FormItem className="flex items-center space-x-3">
                                     <FormControl>
                                       <Input
-                                        placeholder={`보기 ${index + 1}`}
+                                        placeholder={`Option ${index + 1}`}
                                         {...optionField}
                                         className="flex-grow"
                                       />
                                     </FormControl>
                                     <RadioGroupItem value={String(index)} id={`r${index}`} />
-                                    <Label htmlFor={`r${index}`} className="font-normal cursor-pointer">정답</Label>
+                                    <Label htmlFor={`r${index}`} className="font-normal cursor-pointer">Answer</Label>
                                   </FormItem>
                                 )}
                               />
@@ -358,7 +361,7 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
                     name="subType"
                     render={({ field }) => (
                       <FormItem className="space-y-3">
-                        <FormLabel>주관식 유형</FormLabel>
+                        <FormLabel>Subjective Type</FormLabel>
                         <FormControl>
                           <RadioGroup
                             onValueChange={field.onChange}
@@ -367,11 +370,11 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
                           >
                             <FormItem className="flex items-center space-x-2 space-y-0">
                               <RadioGroupItem value="short-answer" />
-                              <FormLabel className="font-normal">단답형</FormLabel>
+                              <FormLabel className="font-normal">Short Answer</FormLabel>
                             </FormItem>
                             <FormItem className="flex items-center space-x-2 space-y-0">
                               <RadioGroupItem value="descriptive" />
-                              <FormLabel className="font-normal">서술형</FormLabel>
+                              <FormLabel className="font-normal">Descriptive</FormLabel>
                             </FormItem>
                           </RadioGroup>
                         </FormControl>
@@ -386,11 +389,11 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>
-                            정답
-                            {subjectiveType === 'short-answer' && <span className="text-destructive"> (필수)</span>}
+                            Answer
+                            {subjectiveType === 'short-answer' && <span className="text-destructive"> (Required)</span>}
                           </FormLabel>
                           <FormControl>
-                            <Textarea placeholder="주관식 정답을 입력하세요." {...field} />
+                            <Textarea placeholder="Enter the subjective answer." {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -405,7 +408,7 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
                         name="grading"
                         render={({ field }) => (
                           <FormItem className="space-y-3">
-                            <FormLabel>채점 방식</FormLabel>
+                            <FormLabel>Grading Method</FormLabel>
                             <FormControl>
                               <RadioGroup
                                 onValueChange={field.onChange}
@@ -414,11 +417,11 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
                               >
                                 <FormItem className="flex items-center space-x-2 space-y-0">
                                   <RadioGroupItem value="ai" />
-                                  <FormLabel className="font-normal">AI 자동 채점</FormLabel>
+                                  <FormLabel className="font-normal">AI Auto Grading</FormLabel>
                                 </FormItem>
                                 <FormItem className="flex items-center space-x-2 space-y-0">
                                   <RadioGroupItem value="teacher" />
-                                  <FormLabel className="font-normal">교사 직접 채점</FormLabel>
+                                  <FormLabel className="font-normal">Manual Grading by Teacher</FormLabel>
                                 </FormItem>
                               </RadioGroup>
                             </FormControl>
@@ -431,10 +434,10 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
                           name="gradingCriteria"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>AI 채점 기준</FormLabel>
+                              <FormLabel>AI Grading Criteria</FormLabel>
                               <FormControl>
                                 <Textarea
-                                  placeholder="AI가 답변을 채점할 때 사용할 구체적인 기준을 입력하세요. (예: 키워드, 문장 구조, 논리 전개 등)"
+                                  placeholder="Enter the specific criteria the AI should use to grade the answer (e.g., keywords, sentence structure, logical flow)."
                                   {...field}
                                   rows={4}
                                 />
@@ -453,11 +456,11 @@ export function ProblemForm({ problem, onSave, isOpen, setIsOpen }: ProblemFormP
         </Form>
         <DialogFooter className="pt-6 border-t mt-6">
           <DialogClose asChild>
-            <Button variant="outline">취소</Button>
+            <Button variant="outline">Cancel</Button>
           </DialogClose>
           <Button onClick={form.handleSubmit(onSubmit)} disabled={isLoading}>
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            저장
+            Save
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -81,13 +81,13 @@ export function UserNav() {
           <DropdownMenuGroup>
             <DropdownMenuItem>
               <UserIcon className="mr-2 h-4 w-4" />
-              <span>프로필</span>
+              <span>Profile</span>
             </DropdownMenuItem>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleLogout}>
             <LogOut className="mr-2 h-4 w-4" />
-            <span>로그아웃</span>
+            <span>Log Out</span>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

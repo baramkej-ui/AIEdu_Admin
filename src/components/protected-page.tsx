@@ -63,7 +63,7 @@ export default function ProtectedPage({ children, allowedRoles }: ProtectedPageP
   if (!allowedRoles.includes(dbUser.role)) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
-        <p>권한이 없습니다. 리디렉션 중...</p>
+        <p>You do not have permission. Redirecting...</p>
         <Loader2 className="ml-2 h-6 w-6 animate-spin text-primary" />
       </div>
     );
