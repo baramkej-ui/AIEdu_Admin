@@ -9,11 +9,13 @@
  * - /users/{userId}: Stores user profiles. The document ID is the Firebase Auth UID.
  * - /problems/{problemId}: Stores quiz problems, accessible to all authenticated users for reading.
  * - /studentProgress/{studentProgressId}: Stores student progress records, with access restricted to the student.
+ * - /levelTests/{testId}: Stores configuration for level tests.
+ * - /rolePlayScenarios/{scenarioId}: Stores scenarios for role-playing exercises.
  *
  * Key Security Decisions:
- * - User listing is not allowed.
+ * - User listing is restricted to admin and teacher roles.
  * - The 'role' field in the user document determines admin/teacher privileges.
- * - Data validation is minimized in this prototyping phase, focusing on access control and relational integrity.
+ * - Data validation is minimized in this prototyping phase, focusing on access control.
  *
  * Denormalization for Authorization:
  * - The user's role ('admin', 'teacher', 'student') is stored directly in the /users/{userId} document. This avoids the need for separate role lookups when evaluating rules.
@@ -22,28 +24,41 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function getUserRole(userId) {
+        return get(/databases/$(database)/documents/users/$(userId)).data.role;
+    }
+
+    function isAdmin() {
+        return isSignedIn() && getUserRole(request.auth.uid) == 'admin';
+    }
+
+    function isTeacher() {
+        return isSignedIn() && getUserRole(request.auth.uid) == 'teacher';
+    }
+
+    function isAdminOrTeacher() {
+        return isAdmin() || isTeacher();
+    }
+
     /**
      * @description Controls access to user profile documents.
      * @path /users/{userId}
-     * @allow (create) Signed-in user can create their own profile if the userId matches their auth.uid.
-     * @allow (get, list) Signed-in user can read their own profile.
+     * @allow (get) Signed-in user can read their own profile.
+     * @allow (list) Admin or teacher roles can list users.
+     * @allow (create) Signed-in user can create their own profile.
      * @allow (update, delete) Signed-in user can update/delete their own profile.
-     * @deny (create) User cannot create a profile for another user.
-     * @deny (update, delete) User cannot update/delete another user's profile.
-     * @principle Enforces document ownership for user profiles.
      */
     match /users/{userId} {
-      // Helper function to check if the user is signed in and owns the document.
-      function isOwner(userId) {
-        return request.auth != null && request.auth.uid == userId;
-      }
-
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
       allow get: if isSignedIn() && isOwner(userId);
-      allow list: if false;
+      allow list: if isAdminOrTeacher();
       allow create: if isSignedIn() && isOwner(userId);
       allow update: if isSignedIn() && isOwner(userId);
       allow delete: if isSignedIn() && isOwner(userId);
@@ -53,24 +68,22 @@ service cloud.firestore {
      * @description Controls access to quiz problem documents.
      * @path /problems/{problemId}
      * @allow (get, list) All authenticated users can read quiz problems.
-     * @allow (create) Only admin or teacher roles can create problems.
-     * @allow (update, delete) Only admin or teacher roles can update/delete problems.
-     * @deny (create, update, delete) Non-admin/teacher roles cannot modify problems.
-     * @principle Enforces role-based access control for problem management.
+     * @allow (create, update, delete) Only admin or teacher roles can modify problems.
      */
     match /problems/{problemId} {
-        function isSignedIn() {
-            return request.auth != null;
-        }
-
-        function isAdminOrTeacher() {
-            return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'teacher'];
-        }
-
         allow get, list: if isSignedIn();
-        allow create: if isAdminOrTeacher();
-        allow update: if isAdminOrTeacher();
-        allow delete: if isAdminOrTeacher();
+        allow create, update, delete: if isAdminOrTeacher();
+    }
+    
+    /**
+     * @description Controls access to Role-Play scenario documents.
+     * @path /rolePlayScenarios/{scenarioId}
+     * @allow (get, list) All authenticated users can read scenarios.
+     * @allow (create, update, delete) Only admin or teacher roles can modify scenarios.
+     */
+    match /rolePlayScenarios/{scenarioId} {
+        allow get, list: if isSignedIn();
+        allow create, update, delete: if isAdminOrTeacher();
     }
 
     /**
@@ -78,27 +91,27 @@ service cloud.firestore {
      * @path /studentProgress/{studentProgressId}
      * @allow (get) All authenticated users can read student progress.
      * @allow (create, update) Students can only create/update their own progress records.
-     * @deny (create, update) Students cannot modify other student's progress records.
-     * @principle Enforces user-level ownership for student progress data.
      */
     match /studentProgress/{studentProgressId} {
-        function isSignedIn() {
-            return request.auth != null;
-        }
-
-        function isOwner(studentId) {
-            return request.auth != null && request.auth.uid == studentId;
-        }
-
         function getStudentIdFromProgressId(studentProgressId) {
             return studentProgressId.split('-')[0];
         }
 
         allow get: if isSignedIn();
-        allow list: if false;
-        allow create: if isSignedIn() && request.auth.uid == getStudentIdFromProgressId(studentProgressId);
-        allow update: if isSignedIn() && request.auth.uid == getStudentIdFromProgressId(studentProgressId);
+        allow list: if false; // No one should be able to list all progress records at once.
+        allow create, update: if isSignedIn() && isOwner(getStudentIdFromProgressId(studentProgressId));
         allow delete: if false;
+    }
+
+    /**
+     * @description Controls access to level test configuration documents.
+     * @path /levelTests/{testId}
+     * @allow (get, list) Admin or teacher roles can read test configurations.
+     * @allow (create, update, delete) Admin or teacher roles can modify test configurations.
+     */
+    match /levelTests/{testId} {
+        allow get, list: if isAdminOrTeacher();
+        allow create, update, delete: if isAdminOrTeacher();
     }
   }
 }
