@@ -24,7 +24,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           )}
         >
           {!isCollapsed && (
-            <h1 className="text-lg font-bold text-primary">AIEdu</h1>
+            <h1 className="text-lg font-bold text-primary">AIEdu (Admin)</h1>
           )}
           <BookOpenCheck
             className={cn('h-6 w-6 text-primary', isCollapsed && 'mx-auto')}
