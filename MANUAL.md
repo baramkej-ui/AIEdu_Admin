@@ -1,123 +1,123 @@
-# AIEdu Admin Program Manual & Handover Document
+# AIEdu 관리자 프로그램 매뉴얼 및 인수인계 문서
 
-## 1. Program Overview
+## 1. 프로그램 개요
 
-### 1.1. Program Purpose
+### 1.1. 프로그램의 목적
 
-This program is a **dedicated admin website** for managing and operating the core data of the **'AIEdu AI Learning Platform'**. Its goal is to provide integrated management of students, teachers, and learning content (problems, level tests, etc.) who use the platform.
+이 프로그램은 **'AIEdu AI 학습 플랫폼'**의 핵심 데이터를 관리하고 운영하기 위한 **전용 관리자 웹사이트**입니다. 플랫폼을 이용하는 학생, 교사, 학습 콘텐츠(문제, 레벨 테스트 등)의 통합적인 관리를 목표로 합니다.
 
-### 1.2. Key Technologies (Simple Explanation)
+### 1.2. 주요 기술 (간단한 설명)
 
--   **Web Framework (Next.js & React)**: The technology used to build the website's structure and screens. It handles all the screens users see and interactions like button clicks.
--   **Database (Firebase Firestore)**: A real-time cloud database that stores all user information, problems, settings, etc. It stores data like an Excel sheet but is much faster and more reliable.
--   **User Authentication (Firebase Authentication)**: A technology that allows admins to log in securely and manages access to ensure only authorized users can access the system.
--   **AI Integration (Genkit)**: A tool that enables the use of Google's artificial intelligence models within the program, such as for the 'Generate Problems with AI' feature.
-
----
-
-## 2. Overall System Architecture
-
-This program consists of three main components:
-
-1.  **Frontend (User Interface)**: The web page part that the admin directly sees and interacts with (the screen you are currently viewing).
-2.  **Backend (Database & Authentication)**: The invisible server part that stores all data (Firestore) and manages user login states (Authentication).
-3.  **AI Service**: An external AI model that handles intelligent tasks like problem generation.
+-   **웹 프레임워크 (Next.js & React)**: 웹사이트의 뼈대와 화면을 만드는 기술입니다. 관리자가 보는 모든 화면과 버튼 클릭 같은 상호작용을 처리합니다.
+-   **데이터베이스 (Firebase Firestore)**: 모든 사용자 정보, 문제, 설정 등을 저장하는 실시간 클라우드 데이터베이스입니다. 엑셀 시트처럼 데이터를 저장하지만 훨씬 빠르고 안정적입니다.
+-   **사용자 인증 (Firebase Authentication)**: 관리자가 안전하게 로그인하고, 허가된 사용자만 시스템에 접근할 수 있도록 권한을 관리하는 기술입니다.
+-   **AI 연동 (Genkit)**: 'AI로 문제 만들기' 기능처럼 프로그램 내에서 구글의 인공지능 모델을 사용할 수 있게 해주는 도구입니다.
 
 ---
 
-## 3. Database Structure (What is stored where?)
+## 2. 전체 시스템 구조
 
-All data is stored in Firebase Firestore and organized into **collections (like folders)** by topic.
+이 프로그램은 크게 3가지 요소로 구성됩니다.
 
-| Collection (Folder)   | Data Stored                                                 | Description                                                                 |
-| --------------------- | ----------------------------------------------------------- | --------------------------------------------------------------------------- |
-| `users`               | User information (name, email, role, etc.)                  | A list of all users, including admins, teachers, and students.              |
-| `problems`            | All problem information (question, options, answer, etc.)   | A question bank to be used for level tests and learning activities.         |
-| `levelTests`          | Level test settings (test duration, problem list)           | Contains the configuration information for 'Reading' and 'Writing' tests.   |
-| `rolePlayScenarios`   | Role-Play situation information (place, situation description) | A list of scenarios to be used for Role-Play learning.                      |
-| `studentProgress`     | Student's problem-solving record                            | Records which problems a student got right and how long it took.            |
+1.  **프론트엔드 (사용자 인터페이스)**: 관리자가 직접 보고 상호작용하는 웹 페이지 부분입니다 (지금 보고 계신 화면).
+2.  **백엔드 (데이터베이스 & 인증)**: 모든 데이터를 저장하고(Firestore), 사용자 로그인 상태를 관리하는(Authentication) 보이지 않는 서버 부분입니다.
+3.  **AI 서비스**: 문제 생성과 같은 지능적인 작업을 처리하는 외부의 인공지능 모델입니다.
 
 ---
 
-## 4. Functionality and Code Explanation by Page
+## 3. 데이터베이스 구조 (어디에 무엇이 저장되나요?)
 
-### 4.1. Login Page (`src/app/login/page.tsx`)
+모든 데이터는 Firebase Firestore에 저장되며, 주제별로 **컬렉션(폴더와 같은 개념)**으로 정리됩니다.
 
--   **Functionality**: The first gateway where the admin enters their email and password to access the system. Users without the 'admin' role are blocked from logging in.
--   **Database Interaction**:
-    -   **Read**: When a user tries to log in, the system first verifies their email and password with Firebase Authentication. Upon success, it then **reads** the user's information from the `users` collection to check if their `role` is 'admin'.
--   **Code's Role**:
-    -   `src/components/auth-form.tsx`: Handles the actual login logic. It sends the user's credentials to Firebase, reads the user's role from the `users` collection, and decides whether to grant access or show an error.
-
-### 4.2. Dashboard (`src/app/dashboard/page.tsx`)
-
--   **Functionality**: The main status page seen immediately after login. It visually displays key metrics such as total number of users, admins, teachers, and students.
--   **Database Interaction**:
-    -   **Read**: When the page loads, it **reads** all documents from the `users` collection to count the total number of users and categorize them by role ('admin', 'teacher', 'student').
--   **Code's Role**:
-    -   The code fetches data in real-time from the `users` collection.
-    -   It then processes this data to calculate the counts for each category and displays them in the respective cards on the screen.
-
-### 4.3. Member Management (`src/app/students/page.tsx`)
-
--   **Functionality**: A page to view users by role ('admin', 'teacher', 'student'), add new users, or edit existing user information.
--   **Database Interaction**:
-    -   **Read**: Displays a list of users by **reading** from the `users` collection. The tabs ('Admin', 'Teacher', 'Student') filter the results based on the `role` field in each user document.
-    -   **Create**: When adding a new user, it first creates the user in Firebase Authentication. Upon success, it **creates** a new document in the `users` collection with the user's details (name, email, role, and the unique ID from Authentication).
-    -   **Update**: When editing a user, it **updates** the corresponding document in the `users` collection with the new information.
-    -   **Delete**: (Simulated) Clicking the delete button is set up to **delete** a user's document from the `users` collection and their account from Firebase Authentication. (Note: Actual deletion requires a secure backend function and is currently simulated).
--   **Code's Role**:
-    -   `src/app/students/page.tsx`: Manages the overall page layout, tabs, and user interaction logic (add, edit, delete).
-    -   `src/components/user-form.tsx`: Provides the form for data entry and handles the submission logic, which triggers the Create or Update operations.
-
-### 4.4. Level Test Management
-
-#### 4.4.1. Level Test Selection Page (`src/app/level-tests/page.tsx`)
-
--   **Functionality**: A menu page to select the type of level test to manage ('Reading', 'Writing', etc.). It does not directly interact with the database.
-
-#### 4.4.2. Reading/Writing Settings Page (`.../reading/page.tsx`, `.../writing/page.tsx`)
-
--   **Functionality**: Sets the test duration (in minutes) and manages the list of problems for a specific level test.
--   **Database Interaction**:
-    -   **Read**:
-        -   **Reads** the specific test document (e.g., 'reading') from the `levelTests` collection to get the current test duration and the list of problem IDs (`problemIds`).
-        -   **Reads** all documents from the `problems` collection to display them for selection.
-    -   **Update**:
-        -   When saving the test duration, it **updates** the `totalTimeMinutes` field in the corresponding `levelTests` document.
-        -   When adding a problem to the test, it **updates** the `problemIds` array in the `levelTests` document by adding the new problem's ID.
-        -   When removing a problem, it **updates** the `problemIds` array by removing the selected problem's ID.
-    -   **Create (Problem)**: Admins can create a new problem directly from this page. This action **creates** a new document in the `problems` collection and simultaneously adds its ID to the `problemIds` array of the current test.
--   **Code's Role**:
-    -   The page fetches and displays settings from `levelTests` and a list of problems from `problems`.
-    -   It provides UI for updating the test duration and modifying the list of associated problems.
-    -   `src/components/problem-form.tsx` is reused here for creating and editing problems.
-
-### 4.5. Learning Management
-
-#### 4.5.1. Learning Management Selection Page (`src/app/problems/page.tsx`)
-
--   **Functionality**: A menu page to select the type of learning content to manage. It does not directly interact with the database.
-
-#### 4.5.2. Role-Play Scenario Management (`.../role-play/page.tsx`)
-
--   **Functionality**: A page to create, view, edit, and delete (CRUD) Role-Play scenarios.
--   **Database Interaction**:
-    -   **Read**: **Reads** all documents from the `rolePlayScenarios` collection and displays them in a list.
-    -   **Create**: When adding a new scenario, it **creates** a new document in the `rolePlayScenarios` collection with the entered 'Place' and 'Situation'.
-    -   **Update**: When editing an existing scenario, it **updates** the content of the corresponding document.
-    -   **Delete**: When deleting a scenario, it **deletes** the corresponding document from the `rolePlayScenarios` collection.
--   **Code's Role**:
-    -   `src/app/problems/role-play/page.tsx`: Manages the display of the scenario list and handles the logic for edit and delete actions.
-    -   `src/components/role-play-form.tsx`: Provides the form for creating and editing scenarios, triggering the Create or Update operations upon saving.
+| 컬렉션 (폴더)     | 저장되는 데이터                                       | 설명                                                                |
+| ------------------- | ----------------------------------------------------- | ------------------------------------------------------------------- |
+| `users`             | 사용자 정보 (이름, 이메일, 역할 등)                   | 관리자, 교사, 학생을 포함한 모든 사용자 목록입니다.                 |
+| `problems`          | 모든 문제 정보 (질문, 선택지, 정답 등)                | 레벨 테스트 및 학습 활동에 사용될 문제 은행입니다.                  |
+| `levelTests`        | 레벨 테스트 설정 (시험 시간, 문제 목록)               | 'Reading', 'Writing' 테스트의 환경설정 정보를 담습니다.             |
+| `rolePlayScenarios` | Role-Play 상황 정보 (장소, 상황 설명)                 | Role-Play 학습에 사용될 시나리오 목록입니다.                        |
+| `studentProgress`   | 학생의 문제 풀이 기록                                 | 어떤 학생이 어떤 문제를 맞혔고, 시간이 얼마나 걸렸는지 기록합니다.  |
 
 ---
 
-## 5. Key Component Descriptions (Reusable Parts)
+## 4. 페이지별 기능 및 코드 설명
 
--   **`src/components/app-layout.tsx` (Base Layout)**: Provides the common framework for all pages (left sidebar menu, top header).
--   **`src/components/sidebar-nav.tsx` (Sidebar Menu)**: Dynamically shows different menu items based on the user's role ('admin', 'teacher').
--   **`src/components/protected-page.tsx` (Access Control)**: A security device that checks the 'allowed roles' for each page, blocks access for unauthorized users, and sends them to the login page.
--   **`src/components/problem-form.tsx` (Problem Creation/Editing Form)**: A complex form for creating and editing various types of problems, such as multiple-choice and subjective. It is reused in multiple places like level test management.
+### 4.1. 로그인 페이지 (`src/app/login/page.tsx`)
 
-We hope this document helps you understand the program and is useful for future maintenance and handover processes. Please feel free to ask any questions.
+-   **기능**: 관리자가 이메일과 비밀번호를 입력하여 시스템에 접근하는 첫 관문입니다. 'admin' 역할이 없는 사용자는 로그인이 차단됩니다.
+-   **데이터베이스 연동**:
+    -   **읽기(Read)**: 사용자가 로그인을 시도하면, 먼저 Firebase Authentication으로 이메일과 비밀번호를 검증합니다. 성공 시, `users` 컬렉션에서 해당 사용자의 정보를 **읽어와** `role`이 'admin'인지 확인합니다.
+-   **코드의 역할**:
+    -   `src/components/auth-form.tsx`: 실제 로그인 로직을 처리합니다. 사용자의 정보를 Firebase로 보내고, `users` 컬렉션에서 역할을 읽어와 접근 허용 여부를 결정하거나 오류를 표시합니다.
+
+### 4.2. 대시보드 (`src/app/dashboard/page.tsx`)
+
+-   **기능**: 로그인 직후 보이는 메인 현황 페이지입니다. 전체 사용자, 관리자, 교사, 학생 수를 시각적으로 보여줍니다.
+-   **데이터베이스 연동**:
+    -   **읽기(Read)**: 페이지가 로딩될 때, `users` 컬렉션의 모든 문서를 **읽어와** 전체 사용자 수를 세고, 역할('admin', 'teacher', 'student')별로 분류합니다.
+-   **코드의 역할**:
+    -   코드는 `users` 컬렉션에서 실시간으로 데이터를 가져옵니다.
+    -   이후 이 데이터를 가공하여 각 항목의 숫자를 계산하고, 화면의 각 카드에 표시합니다.
+
+### 4.3. 구성원 관리 (`src/app/students/page.tsx`)
+
+-   **기능**: 역할('admin', 'teacher', 'student')별로 사용자를 조회하고, 새 사용자를 추가하거나 기존 사용자 정보를 수정하는 페이지입니다.
+-   **데이터베이스 연동**:
+    -   **읽기(Read)**: `users` 컬렉션을 **읽어** 사용자 목록을 표시합니다. 각 탭('Admin', 'Teacher', 'Student')은 사용자 문서의 `role` 필드를 기준으로 결과를 필터링합니다.
+    -   **생성(Create)**: 새 사용자를 추가할 때, 먼저 Firebase Authentication에서 사용자를 생성합니다. 성공 시, `users` 컬렉션에 사용자의 상세 정보(이름, 이메일, 역할 및 Authentication에서 받은 고유 ID)를 담은 새 문서를 **생성**합니다.
+    -   **수정(Update)**: 사용자를 편집할 때, `users` 컬렉션에서 해당 문서를 찾아 새 정보로 **수정**합니다.
+    -   **삭제(Delete)**: (시뮬레이션) 삭제 버튼 클릭 시, `users` 컬렉션에서 사용자 문서를 **삭제**하고 Firebase Authentication에서도 계정을 삭제하도록 설정되어 있습니다. (참고: 실제 삭제는 보안을 위해 백엔드 기능이 필요하며, 현재는 시뮬레이션으로 동작합니다).
+-   **코드의 역할**:
+    -   `src/app/students/page.tsx`: 전체 페이지 레이아웃, 탭, 사용자 상호작용 로직(추가, 수정, 삭제)을 관리합니다.
+    -   `src/components/user-form.tsx`: 데이터 입력을 위한 폼을 제공하고, 제출 시 생성 또는 수정 작업을 트리거하는 로직을 처리합니다.
+
+### 4.4. 레벨 테스트 관리
+
+#### 4.4.1. 레벨 테스트 선택 페이지 (`src/app/level-tests/page.tsx`)
+
+-   **기능**: 관리할 레벨 테스트 종류('Reading', 'Writing' 등)를 선택하는 메뉴 페이지입니다. 직접적인 데이터베이스 연동은 없습니다.
+
+#### 4.4.2. Reading/Writing 설정 페이지 (`.../reading/page.tsx`, `.../writing/page.tsx`)
+
+-   **기능**: 특정 레벨 테스트의 시험 시간(분)을 설정하고, 출제될 문제 목록을 관리합니다.
+-   **데이터베이스 연동**:
+    -   **읽기(Read)**:
+        -   `levelTests` 컬렉션에서 특정 테스트 문서(예: 'reading')를 **읽어와** 현재 설정된 시험 시간과 문제 ID 목록(`problemIds`)을 가져옵니다.
+        -   `problems` 컬렉션의 모든 문서를 **읽어와** 선택할 수 있도록 목록으로 표시합니다.
+    -   **수정(Update)**:
+        -   시험 시간을 저장할 때, 해당 `levelTests` 문서의 `totalTimeMinutes` 필드를 **수정**합니다.
+        -   테스트에 문제를 추가할 때, `levelTests` 문서의 `problemIds` 배열에 새 문제의 ID를 추가하여 **수정**합니다.
+        -   문제를 제거할 때, `problemIds` 배열에서 선택된 문제의 ID를 제거하여 **수정**합니다.
+    -   **생성(Create - 문제)**: 이 페이지에서 관리자는 새 문제를 직접 만들 수 있습니다. 이 작업은 `problems` 컬렉션에 새 문서를 **생성**하고, 동시에 현재 테스트의 `problemIds` 배열에 해당 ID를 추가합니다.
+-   **코드의 역할**:
+    -   페이지는 `levelTests`에서 설정을, `problems`에서 문제 목록을 가져와 표시합니다.
+    -   시험 시간을 수정하고, 연관된 문제 목록을 변경할 수 있는 UI를 제공합니다.
+    -   `src/components/problem-form.tsx`가 문제 생성 및 수정을 위해 여기서 재사용됩니다.
+
+### 4.5. 학습 관리
+
+#### 4.5.1. 학습 관리 선택 페이지 (`src/app/problems/page.tsx`)
+
+-   **기능**: 관리할 학습 콘텐츠의 종류를 선택하는 메뉴 페이지입니다. 직접적인 데이터베이스 연동은 없습니다.
+
+#### 4.5.2. Role-Play 시나리오 관리 (`.../role-play/page.tsx`)
+
+-   **기능**: Role-Play 시나리오를 생성, 조회, 수정, 삭제(CRUD)하는 페이지입니다.
+-   **데이터베이스 연동**:
+    -   **읽기(Read)**: `rolePlayScenarios` 컬렉션의 모든 문서를 **읽어와** 목록으로 표시합니다.
+    -   **생성(Create)**: 새 시나리오를 추가할 때, 입력된 '장소'와 '상황' 정보로 `rolePlayScenarios` 컬렉션에 새 문서를 **생성**합니다.
+    -   **수정(Update)**: 기존 시나리오를 편집할 때, 해당 문서의 내용을 **수정**합니다.
+    -   **삭제(Delete)**: 시나리오를 삭제할 때, `rolePlayScenarios` 컬렉션에서 해당 문서를 **삭제**합니다.
+-   **코드의 역할**:
+    -   `src/app/problems/role-play/page.tsx`: 시나리오 목록 표시 및 수정, 삭제 액션에 대한 로직을 관리합니다.
+    -   `src/components/role-play-form.tsx`: 시나리오 생성 및 편집을 위한 폼을 제공하고, 저장 시 생성 또는 수정 작업을 트리거합니다.
+
+---
+
+## 5. 주요 컴포넌트 설명 (재사용되는 부품)
+
+-   **`src/components/app-layout.tsx` (기본 레이아웃)**: 모든 페이지의 공통적인 틀(왼쪽 사이드바 메뉴, 상단 헤더)을 제공합니다.
+-   **`src/components/sidebar-nav.tsx` (사이드바 메뉴)**: 사용자의 역할('admin', 'teacher')에 따라 다른 메뉴 항목을 동적으로 보여줍니다.
+-   **`src/components/protected-page.tsx` (접근 제어)**: 각 페이지의 '허용된 역할'을 확인하여, 권한 없는 사용자의 접근을 차단하고 로그인 페이지로 보내는 보안 장치입니다.
+-   **`src/components/problem-form.tsx` (문제 생성/수정 폼)**: 객관식, 주관식 등 다양한 유형의 문제를 만들고 편집하기 위한 복합적인 폼입니다. 레벨 테스트 관리 등 여러 곳에서 재사용됩니다.
+
+이 문서가 프로그램을 이해하고, 향후 유지보수 및 인수인계 과정에 도움이 되기를 바랍니다. 궁금한 점이 있으시면 언제든지 문의해주세요.
