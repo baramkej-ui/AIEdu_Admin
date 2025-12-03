@@ -44,70 +44,72 @@ All data is stored in Firebase Firestore and organized into **collections (like 
 ### 4.1. Login Page (`src/app/login/page.tsx`)
 
 -   **Functionality**: The first gateway where the admin enters their email and password to access the system. Users without the 'admin' role are blocked from logging in.
+-   **Database Interaction**:
+    -   **Read**: When a user tries to log in, the system first verifies their email and password with Firebase Authentication. Upon success, it then **reads** the user's information from the `users` collection to check if their `role` is 'admin'.
 -   **Code's Role**:
-    -   `src/components/auth-form.tsx`: Handles the actual login logic.
-    -   It sends the email/password entered by the user to the Firebase authentication system for verification.
-    -   Upon successful login, it further checks if the user's 'role' in the `users` collection is 'admin'.
-    -   If the role is 'admin', it redirects to the dashboard; otherwise, it displays an error message and denies access.
+    -   `src/components/auth-form.tsx`: Handles the actual login logic. It sends the user's credentials to Firebase, reads the user's role from the `users` collection, and decides whether to grant access or show an error.
 
 ### 4.2. Dashboard (`src/app/dashboard/page.tsx`)
 
--   **Functionality**: The main status page seen immediately after login. It visually displays key metrics such as total number of users, problems, teachers, and students.
+-   **Functionality**: The main status page seen immediately after login. It visually displays key metrics such as total number of users, admins, teachers, and students.
+-   **Database Interaction**:
+    -   **Read**: When the page loads, it **reads** all documents from the `users` collection to count the total number of users and categorize them by role ('admin', 'teacher', 'student').
 -   **Code's Role**:
-    -   When the page loads, it fetches data in real-time from the `users` and `problems` collections.
-    -   It calculates 'Total Users', 'Total Problems', etc., based on the fetched data.
-    -   The calculated numbers are displayed in each card (rectangular info box).
-    -   The monthly user activity graph currently displays fixed sample data, but the foundation is in place to connect it to actual data.
+    -   The code fetches data in real-time from the `users` collection.
+    -   It then processes this data to calculate the counts for each category and displays them in the respective cards on the screen.
 
 ### 4.3. Member Management (`src/app/students/page.tsx`)
 
--   **Functionality**: A page to view users by role ('admin', 'teacher', 'student'), add new users, or edit/delete existing user information.
+-   **Functionality**: A page to view users by role ('admin', 'teacher', 'student'), add new users, or edit existing user information.
+-   **Database Interaction**:
+    -   **Read**: Displays a list of users by **reading** from the `users` collection. The tabs ('Admin', 'Teacher', 'Student') filter the results based on the `role` field in each user document.
+    -   **Create**: When adding a new user, it first creates the user in Firebase Authentication. Upon success, it **creates** a new document in the `users` collection with the user's details (name, email, role, and the unique ID from Authentication).
+    -   **Update**: When editing a user, it **updates** the corresponding document in the `users` collection with the new information.
+    -   **Delete**: (Simulated) Clicking the delete button is set up to **delete** a user's document from the `users` collection and their account from Firebase Authentication. (Note: Actual deletion requires a secure backend function and is currently simulated).
 -   **Code's Role**:
-    -   `src/app/students/page.tsx`:
-        -   Creates tabs for 'Admin', 'Teacher', and 'Student'. Clicking a tab filters and displays only the users of that role from the `users` collection.
-        -   Clicking the 'Add User' button displays the user information input form (`UserForm`).
-    -   `src/components/user-form.tsx`:
-        -   A form to input the user's name, email, role, and password.
-        -   **When saving a new user**:
-            1.  Calls an AI Flow (`createFirebaseAuthUser`), a secure backend function, to first create the user in the Firebase authentication system.
-            2.  Upon successful creation, it receives the user's unique ID (UID) and saves the rest of the information (name, email, role) to the `users` collection.
-        -   **When editing an existing user**: It finds the user's document in the `users` collection and updates the information.
+    -   `src/app/students/page.tsx`: Manages the overall page layout, tabs, and user interaction logic (add, edit, delete).
+    -   `src/components/user-form.tsx`: Provides the form for data entry and handles the submission logic, which triggers the Create or Update operations.
 
 ### 4.4. Level Test Management
 
 #### 4.4.1. Level Test Selection Page (`src/app/level-tests/page.tsx`)
 
--   **Functionality**: A menu page to select the type of level test to manage ('Reading', 'Writing', etc.).
--   **Code's Role**: It serves a simple navigation role, linking each button to the appropriate page. Currently, 'Reading' and 'Writing' buttons are active.
+-   **Functionality**: A menu page to select the type of level test to manage ('Reading', 'Writing', etc.). It does not directly interact with the database.
 
 #### 4.4.2. Reading/Writing Settings Page (`.../reading/page.tsx`, `.../writing/page.tsx`)
 
--   **Functionality**: Sets the test duration (in minutes) for each level test and manages the problems to be included in the test (add/remove).
+-   **Functionality**: Sets the test duration (in minutes) and manages the list of problems for a specific level test.
+-   **Database Interaction**:
+    -   **Read**:
+        -   **Reads** the specific test document (e.g., 'reading') from the `levelTests` collection to get the current test duration and the list of problem IDs (`problemIds`).
+        -   **Reads** all documents from the `problems` collection to display them for selection.
+    -   **Update**:
+        -   When saving the test duration, it **updates** the `totalTimeMinutes` field in the corresponding `levelTests` document.
+        -   When adding a problem to the test, it **updates** the `problemIds` array in the `levelTests` document by adding the new problem's ID.
+        -   When removing a problem, it **updates** the `problemIds` array by removing the selected problem's ID.
+    -   **Create (Problem)**: Admins can create a new problem directly from this page. This action **creates** a new document in the `problems` collection and simultaneously adds its ID to the `problemIds` array of the current test.
 -   **Code's Role**:
-    -   When the page loads, it fetches the settings for the current test (e.g., 'reading') from the `levelTests` collection.
-    -   It sets the default value of the 'Test Duration' dropdown menu based on the fetched information.
-    -   It fetches all problems from the `problems` collection, then filters and displays only the problems whose `problemIds` are included in the current test settings in the 'Problem List' table.
-    -   Clicking the 'Add Problem' button displays the problem creation/editing form (`ProblemForm`) to create a new problem or add an existing one to the list.
-    -   Clicking the 'Delete' button removes only the problem ID from the `problemIds` array in the `levelTests` document. (The problem itself is not deleted from the `problems` collection).
+    -   The page fetches and displays settings from `levelTests` and a list of problems from `problems`.
+    -   It provides UI for updating the test duration and modifying the list of associated problems.
+    -   `src/components/problem-form.tsx` is reused here for creating and editing problems.
 
 ### 4.5. Learning Management
 
 #### 4.5.1. Learning Management Selection Page (`src/app/problems/page.tsx`)
 
--   **Functionality**: A menu page to select the type of learning content to manage ('Role-Play', etc.).
--   **Code's Role**: Clicking the 'Role-Play' button serves a navigation role to go to the relevant management page.
+-   **Functionality**: A menu page to select the type of learning content to manage. It does not directly interact with the database.
 
 #### 4.5.2. Role-Play Scenario Management (`.../role-play/page.tsx`)
 
--   **Functionality**: A page to create, view, edit, and delete (CRUD) Role-Play scenarios for students to practice.
+-   **Functionality**: A page to create, view, edit, and delete (CRUD) Role-Play scenarios.
+-   **Database Interaction**:
+    -   **Read**: **Reads** all documents from the `rolePlayScenarios` collection and displays them in a list.
+    -   **Create**: When adding a new scenario, it **creates** a new document in the `rolePlayScenarios` collection with the entered 'Place' and 'Situation'.
+    -   **Update**: When editing an existing scenario, it **updates** the content of the corresponding document.
+    -   **Delete**: When deleting a scenario, it **deletes** the corresponding document from the `rolePlayScenarios` collection.
 -   **Code's Role**:
-    -   `src/app/problems/role-play/page.tsx`:
-        -   When the page loads, it fetches all data from the `rolePlayScenarios` collection and displays it in a list format.
-        -   Clicking the 'Add New Scenario' button displays the scenario input form (`RolePlayForm`).
-        -   Each scenario can be managed via the 'Edit' and 'Delete' buttons in the list.
-    -   `src/components/role-play-form.tsx`:
-        -   A form to input 'Place' and 'Situation' as text.
-        -   Clicking the 'Save' button saves the entered data as a new document in the `rolePlayScenarios` collection or updates an existing document.
+    -   `src/app/problems/role-play/page.tsx`: Manages the display of the scenario list and handles the logic for edit and delete actions.
+    -   `src/components/role-play-form.tsx`: Provides the form for creating and editing scenarios, triggering the Create or Update operations upon saving.
 
 ---
 
