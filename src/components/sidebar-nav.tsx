@@ -18,14 +18,14 @@ import {
 const navItems = {
   admin: [
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { href: '/level-tests', label: 'Level Tests', icon: ClipboardList },
-    { href: '/problems', label: 'Learning Mgmt', icon: BookOpen },
-    { href: '/students', label: 'Members', icon: Users },
+    { href: '/level-tests', label: 'Level Test', icon: ClipboardList },
+    { href: '/problems', label: 'Learning', icon: BookOpen },
+    { href: '/students', label: 'User', icon: Users },
   ],
   teacher: [
-    { href: '/students', label: 'Members', icon: Users },
-    { href: '/problems', label: 'Learning Mgmt', icon: BookOpen },
-    { href: '/level-tests', label: 'Level Tests', icon: ClipboardList },
+    { href: '/students', label: 'User', icon: Users },
+    { href: '/problems', label: 'Learning', icon: BookOpen },
+    { href: '/level-tests', label: 'Level Test', icon: ClipboardList },
   ],
   student: [], // Student nav items are removed
 };
