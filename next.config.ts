@@ -32,4 +32,5 @@ const nextConfig: NextConfig = {
   },
 };
 
+// Re-trigger build to resolve security warning
 export default nextConfig;
