@@ -1,0 +1,19 @@
+{
+    "hosting": [
+      {
+        "public": ".next", 
+        "site": "aiedu-admin-site", 
+        "ignore": [
+          "firebase.json",
+          "**/.*",
+          "**/node_modules/**"
+        ],
+        "rewrites": [
+          {
+            "source": "**",
+            "destination": "/index.html"
+          }
+        ]
+      }
+    ]
+  }
