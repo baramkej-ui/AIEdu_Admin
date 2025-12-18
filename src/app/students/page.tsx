@@ -20,8 +20,8 @@ import { Button } from "@/components/ui/button";
 import ProtectedPage from "@/components/protected-page";
 import { PageHeader } from "@/components/page-header";
 import { Loader2, PlusCircle, MoreHorizontal, Pencil, Trash2, ArrowUpDown } from "lucide-react";
-import { useFirestore, useCollection, useMemoFirebase, useUser, setDocumentNonBlocking, useFirebaseApp } from "@/firebase";
-import { collection, query, where, doc } from "firebase/firestore";
+import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
+import { collection, query, where } from "firebase/firestore";
 import type { User, UserRole } from "@/lib/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -42,8 +42,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { UserForm } from "@/components/user-form";
 import { useToast } from '@/hooks/use-toast';
-import { initializeApp, deleteApp } from 'firebase/app';
-import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
 
@@ -75,6 +73,7 @@ const UserTable = ({
   const { user: authUser } = useUser();
   const [sortKey, setSortKey] = React.useState<SortKey>('name');
   const [sortDirection, setSortDirection] = React.useState<SortDirection>('asc');
+  const router = useRouter();
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -124,6 +123,12 @@ const UserTable = ({
       <ArrowUpDown className="h-4 w-4" /> : 
       <ArrowUpDown className="h-4 w-4" />;
   };
+  
+  const handleRowClick = (user: User) => {
+    if(user.role !== 'student'){
+      router.push(`/students/${user.id}`);
+    }
+  }
 
   return (
     <Card>
@@ -168,7 +173,7 @@ const UserTable = ({
             </TableHeader>
             <TableBody>
               {sortedUsers?.map((user) => (
-                <TableRow key={user.id}>
+                <TableRow key={user.id} onClick={() => handleRowClick(user)} className={user.role !== 'student' ? 'cursor-pointer' : ''}>
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <Avatar>
@@ -183,17 +188,17 @@ const UserTable = ({
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
+                        <Button variant="ghost" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
                           <span className="sr-only">Open menu</span>
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => onEditUser(user)}>
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEditUser(user); }}>
                           <Pencil className="mr-2 h-4 w-4" />
                           Edit
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => onDeleteUser(user)} className="text-destructive focus:text-destructive">
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDeleteUser(user); }} className="text-destructive focus:text-destructive">
                           <Trash2 className="mr-2 h-4 w-4" />
                           Delete
                         </DropdownMenuItem>
@@ -213,8 +218,6 @@ const UserTable = ({
 
 export default function StudentsPage() {
   const firestore = useFirestore();
-  const mainApp = useFirebaseApp();
-  const router = useRouter();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = React.useState<UserRole>("teacher");
 
@@ -228,7 +231,20 @@ export default function StudentsPage() {
     return query(collection(firestore, 'users'), where('role', '==', activeTab));
   }, [firestore, activeTab]);
 
-  const { data: users, isLoading } = useCollection<User>(usersQuery);
+  const { data: users, isLoading, error: collectionError } = useCollection<User>(usersQuery);
+  // Force a re-render when users data changes to ensure table updates after delete
+  const [_, setForceRender] = React.useState(0);
+
+  React.useEffect(() => {
+    if(collectionError) {
+      toast({
+        variant: "destructive",
+        title: "Error fetching users",
+        description: collectionError.message
+      })
+    }
+  }, [collectionError, toast])
+
 
   const handleAddUser = (role: UserRole) => {
     setUserToEdit(undefined);
@@ -241,68 +257,38 @@ export default function StudentsPage() {
   }
   
   const handleSaveUser = async (userData: any, id?: string) => {
-    if (!firestore || !mainApp) {
-      toast({ variant: 'destructive', title: "Error", description: "Database service is not available." });
-      return;
-    }
-    
-    if (id) { // Editing existing user
-      const userDocRef = doc(firestore, 'users', id);
-      const { password, ...updateData } = userData;
-      setDocumentNonBlocking(userDocRef, updateData, { merge: true });
-      // Note: Password/email updates in Auth for existing users would require re-authentication and is complex for this flow.
-      // For now, we only update Firestore data.
-      toast({
-          title: "Success",
-          description: "User information has been successfully updated."
-      });
+    const isEditing = !!id;
+    const url = '/api/users';
+    const method = isEditing ? 'PUT' : 'POST';
 
-    } else { // Creating new user
-        if (!userData.password) {
-            throw new Error("Password is required for a new user.");
+    const body = isEditing ? { id, ...userData } : userData;
+    
+    try {
+        const response = await fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || `Failed to ${isEditing ? 'update' : 'create'} user`);
         }
         
-        // Create a secondary app instance to create a user without signing out the current admin
-        const secondaryAppName = `secondary-app-${Date.now()}`;
-        const secondaryApp = initializeApp(mainApp.options, secondaryAppName);
-        const secondaryAuth = getAuth(secondaryApp);
+        toast({
+            title: "Success",
+            description: `User has been successfully ${isEditing ? 'updated' : 'created'}.`
+        });
 
-        try {
-            const userCredential = await createUserWithEmailAndPassword(secondaryAuth, userData.email, userData.password);
-            const authUid = userCredential.user.uid;
-
-            const newUser: Omit<User, 'lastLogin'> = {
-                id: authUid,
-                name: userData.name,
-                email: userData.email,
-                role: userData.role,
-                avatarUrl: `https://picsum.photos/seed/${authUid}/40/40`
-            };
-    
-            const userDocRef = doc(firestore, "users", authUid);
-            setDocumentNonBlocking(userDocRef, newUser, {});
-          
-            toast({
-                title: "Success",
-                description: "A new user has been successfully created."
-            });
-
-        } catch (error: any) {
-            // Translate Firebase auth errors to user-friendly messages
-            let errorMessage = error.message || "An unknown error occurred during user creation.";
-            if (error.code === 'auth/email-already-in-use') {
-                errorMessage = "This email address is already in use by another account.";
-            } else if (error.code === 'auth/invalid-email') {
-                errorMessage = "The email address is not valid.";
-            } else if (error.code === 'auth/weak-password') {
-                errorMessage = "The password is too weak. It must be at least 6 characters long.";
-            }
-            // Re-throw the translated error message to be caught by the form
-            throw new Error(errorMessage);
-        } finally {
-            // Clean up the secondary app instance
-            await deleteApp(secondaryApp);
-        }
+    } catch (error: any) {
+        console.error(`Failed to save user:`, error);
+        toast({
+            variant: "destructive",
+            title: "Save Failed",
+            description: error.message
+        });
+        // Re-throw to prevent form from closing on failure
+        throw error;
     }
   }
 
@@ -311,16 +297,40 @@ export default function StudentsPage() {
     setIsAlertOpen(true);
   }
 
-  const handleDelete = () => {
-    // Logic to delete user would need a backend function for security.
-    // For now, it only closes the dialog.
-    console.log("Deleting user (simulation):", userToDelete?.id);
-    toast({
-        title: "Delete Simulation",
-        description: "Actual deletion requires a backend function.",
-    });
-    setIsAlertOpen(false);
-    setUserToDelete(null);
+  const handleDelete = async () => {
+    if (!userToDelete) return;
+    
+    try {
+      const response = await fetch('/api/users', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: userToDelete.id, email: userToDelete.email }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to delete user.');
+      }
+      
+      toast({
+          title: "User Deleted",
+          description: `${userToDelete.name} has been successfully deleted.`,
+      });
+
+      // Force a re-render to update the table UI immediately
+      setForceRender(prev => prev + 1);
+
+    } catch (error: any) {
+      console.error('Deletion failed:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Deletion Failed',
+        description: error.message,
+      });
+    } finally {
+      setIsAlertOpen(false);
+      setUserToDelete(null);
+    }
   }
 
   return (
@@ -380,7 +390,7 @@ export default function StudentsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure you want to delete this user?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. The user's data will be permanently deleted.
+              This action will permanently delete the user from Authentication and Firestore. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

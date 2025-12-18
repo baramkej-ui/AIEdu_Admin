@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth, useFirestore, setDocumentNonBlocking } from '@/firebase';
+import { useAuth, useFirestore } from '@/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import type { UserRole, User } from '@/lib/types';
@@ -35,8 +35,8 @@ interface AuthFormProps {
 
 const roleRedirects: Record<UserRole, string> = {
     admin: '/dashboard',
-    teacher: '/students',
-    student: '/problems',
+    teacher: '/login', // Teachers are blocked
+    student: '/login', // Students are blocked
 };
 
 export function AuthForm({ type }: AuthFormProps) {
@@ -72,14 +72,11 @@ export function AuthForm({ type }: AuthFormProps) {
       const user = userCredential.user;
 
       const userDocRef = doc(firestore, 'users', user.uid);
-      
-      setDocumentNonBlocking(userDocRef, { lastLogin: new Date() }, { merge: true });
-
       const userDoc = await getDoc(userDocRef);
 
       if (userDoc.exists()) {
           const userData = userDoc.data() as User;
-          const userRole = userData.role && typeof userData.role === 'string' ? userData.role.trim() : undefined;
+          const userRole = userData.role ? userData.role.trim() : undefined;
           
           if (userRole === 'admin') {
             toast({ title: "Login Successful", description: "Redirecting..." });
@@ -103,6 +100,7 @@ export function AuthForm({ type }: AuthFormProps) {
     } catch (error: any) {
         const errorCode = error.code;
         let errorMessage = "An error occurred during login.";
+        
         if (errorCode === 'auth/user-not-found' || errorCode === 'auth/wrong-password' || errorCode === 'auth/invalid-credential') {
           errorMessage = 'Incorrect email or password.';
         } else {

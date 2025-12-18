@@ -8,52 +8,74 @@ import { doc, getDoc } from 'firebase/firestore';
 
 const roleRedirects: Record<UserRole, string> = {
   admin: '/dashboard',
-  teacher: '/students',
-  student: '/problems',
+  teacher: '/login', // Teachers are blocked and redirected to login
+  student: '/login', // Students are blocked and redirected to login
 };
 
 export default function HomePage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
-  const [dbUser, setDbUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (isUserLoading) return;
+    // Wait until the initial user loading is finished.
+    if (isUserLoading) {
+      return;
+    }
+
+    // If there is no authenticated user, redirect to login.
     if (!user) {
       router.replace('/login');
       return;
     }
 
+    // If we don't have a firestore instance, we can't verify the role.
+    if (!firestore) {
+      // This case should ideally not happen if the provider is set up correctly
+      router.replace('/login');
+      return;
+    }
+
     const fetchUserRole = async () => {
-      if (!firestore) return;
       const userDocRef = doc(firestore, 'users', user.uid);
       
       // Non-blocking update for last login
       setDocumentNonBlocking(userDocRef, { lastLogin: new Date() }, { merge: true });
 
-      const userDoc = await getDoc(userDocRef);
-      if (userDoc.exists()) {
-        const userData = userDoc.data() as User;
-        setDbUser(userData);
-        if (userData.role === 'admin') {
-            router.replace(roleRedirects.admin);
+      try {
+        const userDoc = await getDoc(userDocRef);
+        if (userDoc.exists()) {
+          const userData = userDoc.data() as User;
+          const userRole = userData.role;
+
+          if (userRole === 'admin') {
+              router.replace(roleRedirects.admin);
+          } else {
+              // Any other role is not allowed and should be signed out and redirected to login.
+              await user.auth.signOut();
+              router.replace('/login'); 
+          }
         } else {
-            // Non-admin users are logged out and redirected.
-            router.replace('/login'); 
+          // Handle case where user exists in Auth but not in Firestore.
+          // Sign them out and redirect to login.
+          await user.auth.signOut();
+          router.replace('/login');
         }
-      } else {
-        // Handle case where user exists in Auth but not in Firestore
-        // For now, redirect to login
+      } catch (error) {
+        console.error("Error fetching user role, signing out:", error);
+        await user.auth.signOut();
         router.replace('/login');
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    fetchUserRole().finally(() => setIsLoading(false));
+    fetchUserRole();
   }, [user, isUserLoading, router, firestore]);
   
-  if (isLoading || isUserLoading || !dbUser) {
+  // Show a loading spinner while verifying the user role.
+  if (isLoading || isUserLoading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -61,5 +83,6 @@ export default function HomePage() {
     );
   }
 
+  // Render nothing while redirecting
   return null;
 }
