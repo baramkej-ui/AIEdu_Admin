@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import type { UserRole, User } from '@/lib/types';
 import { Loader2 } from 'lucide-react';
-import { doc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 
 const roleRedirects: Record<UserRole, string> = {
   admin: '/dashboard',
