@@ -73,23 +73,24 @@ export function AuthForm({ type }: AuthFormProps) {
 
       const userDocRef = doc(firestore, 'users', user.uid);
       
-      // Immediately update last login time upon successful authentication
       setDocumentNonBlocking(userDocRef, { lastLoginAt: new Date() }, { merge: true });
 
       const userDoc = await getDoc(userDocRef);
 
       if (userDoc.exists()) {
           const userData = userDoc.data() as User;
-          if (userData.role !== 'admin' && userData.role !== 'teacher') {
+          const userRole = userData.role && typeof userData.role === 'string' ? userData.role.trim() : undefined;
+          
+          if (userRole === 'admin') {
+            toast({ title: "Login Successful", description: "Redirecting..." });
+            router.push(roleRedirects.admin);
+          } else {
             await auth.signOut();
             toast({
               variant: 'destructive',
               title: 'Login Failed',
-              description: 'Only admin or teacher accounts can log in.',
+              description: 'Only admin accounts can log in.',
             });
-          } else {
-            toast({ title: "Login Successful", description: "Redirecting..." });
-            router.push(roleRedirects[userData.role]);
           }
       } else {
           await auth.signOut();
