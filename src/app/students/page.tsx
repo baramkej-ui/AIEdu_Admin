@@ -19,7 +19,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import ProtectedPage from "@/components/protected-page";
 import { PageHeader } from "@/components/page-header";
-import { Loader2, PlusCircle, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { Loader2, PlusCircle, MoreHorizontal, Pencil, Trash2, ArrowUpDown } from "lucide-react";
 import { useFirestore, useCollection, useMemoFirebase, useUser, setDocumentNonBlocking, useFirebaseApp } from "@/firebase";
 import { collection, query, where, doc } from "firebase/firestore";
 import type { User, UserRole } from "@/lib/types";
@@ -45,6 +45,7 @@ import { useToast } from '@/hooks/use-toast';
 import { initializeApp, deleteApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 
 const roleLabels: Record<UserRole, string> = {
@@ -52,6 +53,9 @@ const roleLabels: Record<UserRole, string> = {
   teacher: 'Teachers',
   student: 'Students',
 };
+
+type SortKey = 'name' | 'email' | 'lastLoginAt';
+type SortDirection = 'asc' | 'desc';
 
 const UserTable = ({
   role,
@@ -69,6 +73,33 @@ const UserTable = ({
   isLoading: boolean;
 }) => {
   const { user: authUser } = useUser();
+  const [sortKey, setSortKey] = React.useState<SortKey>('name');
+  const [sortDirection, setSortDirection] = React.useState<SortDirection>('asc');
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortKey(key);
+      setSortDirection('asc');
+    }
+  };
+
+  const sortedUsers = React.useMemo(() => {
+    if (!users) return [];
+    return [...users].sort((a, b) => {
+      const aValue = a[sortKey];
+      const bValue = b[sortKey];
+
+      let compareValue = 0;
+      if (aValue === undefined || aValue === null) compareValue = 1;
+      else if (bValue === undefined || bValue === null) compareValue = -1;
+      else if (aValue < bValue) compareValue = -1;
+      else if (aValue > bValue) compareValue = 1;
+
+      return sortDirection === 'asc' ? compareValue : -compareValue;
+    });
+  }, [users, sortKey, sortDirection]);
 
   const getInitials = (name: string) => {
     return name?.split(' ').map(n => n[0]).join('').toUpperCase() || '';
@@ -76,10 +107,16 @@ const UserTable = ({
 
   const formatDate = (date: any) => {
     if (!date) return '-';
-    // Firestore Timestamps can be converted to JS Date objects
     const jsDate = date.toDate ? date.toDate() : date;
     return format(jsDate, 'yyyy-MM-dd HH:mm');
   }
+
+  const renderSortArrow = (key: SortKey) => {
+    if (sortKey !== key) return <ArrowUpDown className="h-4 w-4 text-muted-foreground/50" />;
+    return sortDirection === 'asc' ? 
+      <ArrowUpDown className="h-4 w-4" /> : 
+      <ArrowUpDown className="h-4 w-4" />;
+  };
 
   return (
     <Card>
@@ -101,14 +138,29 @@ const UserTable = ({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead className="hidden md:table-cell">Email</TableHead>
-                {role === 'teacher' && <TableHead className="hidden lg:table-cell">LogIn</TableHead>}
+                <TableHead>
+                  <Button variant="ghost" onClick={() => handleSort('name')} className="px-0">
+                    Name
+                    {renderSortArrow('name')}
+                  </Button>
+                </TableHead>
+                <TableHead className="hidden md:table-cell">
+                   <Button variant="ghost" onClick={() => handleSort('email')} className="px-0">
+                    Email
+                    {renderSortArrow('email')}
+                  </Button>
+                </TableHead>
+                <TableHead className="hidden lg:table-cell">
+                   <Button variant="ghost" onClick={() => handleSort('lastLoginAt')} className="px-0">
+                    LogIn
+                    {renderSortArrow('lastLoginAt')}
+                  </Button>
+                </TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users?.map((user) => (
+              {sortedUsers?.map((user) => (
                 <TableRow key={user.id}>
                   <TableCell>
                     <div className="flex items-center gap-3">
@@ -120,7 +172,7 @@ const UserTable = ({
                     </div>
                   </TableCell>
                   <TableCell className="hidden md:table-cell">{user.email}</TableCell>
-                  {role === 'teacher' && <TableCell className="hidden lg:table-cell">{formatDate(user.lastLoginAt)}</TableCell>}
+                  <TableCell className="hidden lg:table-cell">{formatDate(user.lastLoginAt)}</TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
