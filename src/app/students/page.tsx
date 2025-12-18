@@ -19,7 +19,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import ProtectedPage from "@/components/protected-page";
 import { PageHeader } from "@/components/page-header";
-import { Loader2, PlusCircle, MoreHorizontal, Pencil, Trash2, ArrowUpDown, BookCopy } from "lucide-react";
+import { Loader2, PlusCircle, MoreHorizontal, Pencil, Trash2, ArrowUpDown } from "lucide-react";
 import { useFirestore, useCollection, useMemoFirebase, useUser, setDocumentNonBlocking, useFirebaseApp } from "@/firebase";
 import { collection, query, where, doc } from "firebase/firestore";
 import type { User, UserRole } from "@/lib/types";
@@ -29,7 +29,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
@@ -63,7 +62,6 @@ const UserTable = ({
   onAddUser,
   onEditUser,
   onDeleteUser,
-  onViewUser,
   users,
   isLoading
 }: {
@@ -71,7 +69,6 @@ const UserTable = ({
   onAddUser: (role: UserRole) => void;
   onEditUser: (user: User) => void;
   onDeleteUser: (user: User) => void;
-  onViewUser: (user: User) => void;
   users: User[] | null;
   isLoading: boolean;
 }) => {
@@ -110,9 +107,7 @@ const UserTable = ({
 
   const formatDate = (date: any) => {
     if (!date) return '-';
-    // Firestore Timestamps have a toDate() method. Check for it.
     const jsDate = date.toDate ? date.toDate() : new Date(date);
-    // Validate if the created date is valid
     if (isNaN(jsDate.getTime())) {
         return '-';
     }
@@ -194,11 +189,6 @@ const UserTable = ({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => onViewUser(user)}>
-                          <BookCopy className="mr-2 h-4 w-4" />
-                          View Details
-                        </DropdownMenuItem>
-                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => onEditUser(user)}>
                           <Pencil className="mr-2 h-4 w-4" />
                           Edit
@@ -250,10 +240,6 @@ export default function StudentsPage() {
     setIsFormOpen(true);
   }
   
-  const handleViewUser = (user: User) => {
-    router.push(`/students/${user.id}`);
-  };
-  
   const handleSaveUser = async (userData: any, id?: string) => {
     if (!firestore || !mainApp) {
       toast({ variant: 'destructive', title: "Error", description: "Database service is not available." });
@@ -285,7 +271,7 @@ export default function StudentsPage() {
             const userCredential = await createUserWithEmailAndPassword(secondaryAuth, userData.email, userData.password);
             const authUid = userCredential.user.uid;
 
-            const newUser: Omit<User, 'lastLoginAt' | 'lastLogin'> = {
+            const newUser: Omit<User, 'lastLogin'> = {
                 id: authUid,
                 name: userData.name,
                 email: userData.email,
@@ -355,7 +341,6 @@ export default function StudentsPage() {
             onAddUser={handleAddUser}
             onEditUser={handleEditUser}
             onDeleteUser={openDeleteDialog}
-            onViewUser={handleViewUser}
             users={users}
             isLoading={isLoading}
           />
@@ -366,7 +351,6 @@ export default function StudentsPage() {
             onAddUser={handleAddUser}
             onEditUser={handleEditUser}
             onDeleteUser={openDeleteDialog}
-            onViewUser={handleViewUser}
             users={users}
             isLoading={isLoading}
           />
@@ -377,7 +361,6 @@ export default function StudentsPage() {
             onAddUser={handleAddUser}
             onEditUser={handleEditUser}
             onDeleteUser={openDeleteDialog}
-            onViewUser={handleViewUser}
             users={users}
             isLoading={isLoading}
           />
