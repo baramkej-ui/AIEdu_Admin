@@ -6,6 +6,7 @@ export type User = {
   email: string;
   role: UserRole;
   avatarUrl?: string;
+  lastLogin?: Date;
   lastLoginAt?: Date;
 };
 
@@ -41,4 +42,9 @@ export type RolePlayScenario = {
   id: string;
   place: string;
   situation: string;
+};
+
+export type LoginRecord = {
+  id: string;
+  timestamp: any;
 };

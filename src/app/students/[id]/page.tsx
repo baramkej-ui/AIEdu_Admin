@@ -17,33 +17,28 @@ import {
 import ProtectedPage from "@/components/protected-page";
 import { PageHeader } from "@/components/page-header";
 import { notFound } from "next/navigation";
-import { CheckCircle2, XCircle, Clock, Percent, Target } from "lucide-react";
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { useFirestore, useDoc, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, doc, query, where } from "firebase/firestore";
-import type { User, Problem, StudentProgress } from "@/lib/types";
+import { collection, doc, query, orderBy } from "firebase/firestore";
+import type { User, LoginRecord } from "@/lib/types";
 import { Loader2 } from "lucide-react";
+import { format } from 'date-fns';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 
-export default function StudentDetailPage({ params }: { params: { id: string } }) {
+export default function UserDetailPage({ params }: { params: { id: string } }) {
   const firestore = useFirestore();
 
-  const studentDocRef = useMemoFirebase(() => 
+  const userDocRef = useMemoFirebase(() => 
     firestore ? doc(firestore, 'users', params.id) : null, 
   [firestore, params.id]);
-  const { data: student, isLoading: studentLoading } = useDoc<User>(studentDocRef);
+  const { data: user, isLoading: userLoading } = useDoc<User>(userDocRef);
 
-  const progressQuery = useMemoFirebase(() => 
-    firestore ? query(collection(firestore, 'studentProgress'), where('studentId', '==', params.id)) : null,
+  const loginHistoryQuery = useMemoFirebase(() => 
+    firestore ? query(collection(firestore, 'users', params.id, 'loginHistory'), orderBy('timestamp', 'desc')) : null,
   [firestore, params.id]);
-  const { data: studentProgress, isLoading: progressLoading } = useCollection<StudentProgress>(progressQuery);
+  const { data: loginHistory, isLoading: historyLoading } = useCollection<LoginRecord>(loginHistoryQuery);
 
-  const problemsQuery = useMemoFirebase(() =>
-    firestore ? collection(firestore, 'problems') : null,
-  [firestore]);
-  const { data: problems, isLoading: problemsLoading } = useCollection<Problem>(problemsQuery);
-
-  const isLoading = studentLoading || progressLoading || problemsLoading;
+  const isLoading = userLoading || historyLoading;
 
   if (isLoading) {
       return (
@@ -55,135 +50,105 @@ export default function StudentDetailPage({ params }: { params: { id: string } }
       );
   }
 
-  if (!student) {
+  if (!user) {
     notFound();
   }
   
   const getInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase();
+    return name?.split(' ').map(n => n[0]).join('').toUpperCase() || '';
   }
-
-  const progressData = studentProgress || [];
-  const allProblems = problems || [];
-
-  const solvedCount = progressData.filter(p => p.solved).length;
-  const correctCount = progressData.filter(p => p.correct).length;
-  const accuracy = solvedCount > 0 ? (correctCount / solvedCount) * 100 : 0;
-  const totalTime = progressData.reduce((acc, p) => acc + p.timeTaken, 0);
-  const avgTime = solvedCount > 0 ? totalTime / solvedCount : 0;
-
-  const pieData = [
-    { name: '정답', value: correctCount },
-    { name: '오답', value: solvedCount - correctCount },
-  ];
-  const COLORS = ['hsl(var(--primary))', 'hsl(var(--destructive))'];
+  
+  const formatDate = (date: any) => {
+    if (!date) return 'N/A';
+    const jsDate = date.toDate ? date.toDate() : new Date(date);
+    if (isNaN(jsDate.getTime())) {
+        return 'Invalid Date';
+    }
+    try {
+        return format(jsDate, 'yyyy-MM-dd HH:mm:ss');
+    } catch {
+        return 'Date format error';
+    }
+  }
+  
+  if(user.role === 'student'){
+    return (
+       <ProtectedPage allowedRoles={["admin", "teacher"]}>
+         <PageHeader
+           title="Access Denied"
+           description="Detailed login history is not available for students."
+         />
+       </ProtectedPage>
+    )
+  }
 
   return (
     <ProtectedPage allowedRoles={["admin", "teacher"]}>
-      <PageHeader
-        title={student.name}
-        description={`${student.email} 님의 학습 진행 상황입니다.`}
+       <PageHeader
+        title="User Details"
+        description={`Details and login history for ${user.name}.`}
       />
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">정확도</CardTitle>
-            <Percent className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{accuracy.toFixed(1)}%</div>
-            <p className="text-xs text-muted-foreground">
-              푼 문제 중 정답 비율
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">푼 문제</CardTitle>
-            <Target className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{solvedCount} / {allProblems.length}</div>
-            <p className="text-xs text-muted-foreground">
-              전체 문제 중 해결한 문제
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">평균 해결 시간</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{avgTime.toFixed(1)}초</div>
-            <p className="text-xs text-muted-foreground">
-              문제당 평균 소요 시간
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-            <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">정답/오답 분포</CardTitle>
+      <div className="grid gap-6 md:grid-cols-3">
+        <Card className="md:col-span-1">
+            <CardHeader>
+                <CardTitle>User Profile</CardTitle>
             </CardHeader>
-            <CardContent className="h-[100px]">
-                <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                    <Pie
-                        data={pieData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={25}
-                        outerRadius={40}
-                        paddingAngle={5}
-                        dataKey="value"
-                    >
-                        {pieData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                    </Pie>
-                    <Tooltip />
-                    <Legend iconSize={10} />
-                    </PieChart>
-                </ResponsiveContainer>
+            <CardContent className="space-y-4">
+                <div className="flex items-center gap-4">
+                    <Avatar className="h-16 w-16">
+                      <AvatarImage src={user.avatarUrl} alt={user.name} />
+                      <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                        <p className="text-lg font-semibold">{user.name}</p>
+                        <p className="text-sm text-muted-foreground">{user.email}</p>
+                    </div>
+                </div>
+                 <div className="space-y-1 text-sm">
+                    <div className="flex justify-between">
+                        <span className="text-muted-foreground">User ID:</span>
+                        <span className="font-mono text-xs">{user.id}</span>
+                    </div>
+                    <div className="flex justify-between">
+                        <span className="text-muted-foreground">Role:</span>
+                        <span className="font-medium">{user.role}</span>
+                    </div>
+                    <div className="flex justify-between">
+                        <span className="text-muted-foreground">Last Login:</span>
+                        <span className="font-medium">{formatDate(user.lastLogin)}</span>
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
+
+        <Card className="md:col-span-2">
+            <CardHeader>
+            <CardTitle>Login History</CardTitle>
+            <CardDescription>
+                A record of the user's recent login times.
+                Total {loginHistory?.length ?? 0} records.
+            </CardDescription>
+            </CardHeader>
+            <CardContent>
+            <Table>
+                <TableHeader>
+                <TableRow>
+                    <TableHead>Login Time</TableHead>
+                    <TableHead>Login ID</TableHead>
+                </TableRow>
+                </TableHeader>
+                <TableBody>
+                {loginHistory?.map((record) => (
+                    <TableRow key={record.id}>
+                        <TableCell className="font-medium">{formatDate(record.timestamp)}</TableCell>
+                        <TableCell className="font-mono text-xs">{record.id}</TableCell>
+                    </TableRow>
+                ))}
+                </TableBody>
+            </Table>
             </CardContent>
         </Card>
       </div>
-
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle>최근 활동</CardTitle>
-          <CardDescription>최근에 푼 문제 목록입니다.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>문제</TableHead>
-                <TableHead>결과</TableHead>
-                <TableHead>소요 시간(초)</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {progressData.map((p) => {
-                const problem = allProblems.find(pr => pr.id === p.problemId);
-                return (
-                  <TableRow key={p.id}>
-                    <TableCell className="font-medium">{problem?.question || '삭제된 문제'}</TableCell>
-                    <TableCell>
-                      {p.correct ? (
-                        <CheckCircle2 className="h-5 w-5 text-green-500" />
-                      ) : (
-                        <XCircle className="h-5 w-5 text-red-500" />
-                      )}
-                    </TableCell>
-                    <TableCell>{p.timeTaken}</TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
     </ProtectedPage>
   );
 }

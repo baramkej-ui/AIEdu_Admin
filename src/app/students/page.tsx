@@ -41,21 +41,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-  DialogClose,
-} from "@/components/ui/dialog";
 import { UserForm } from "@/components/user-form";
 import { useToast } from '@/hooks/use-toast';
 import { initializeApp, deleteApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
+import { useRouter } from 'next/navigation';
 
 
 const roleLabels: Record<UserRole, string> = {
@@ -64,7 +55,7 @@ const roleLabels: Record<UserRole, string> = {
   student: 'Students',
 };
 
-type SortKey = 'name' | 'email' | 'lastLoginAt';
+type SortKey = 'name' | 'email' | 'lastLogin';
 type SortDirection = 'asc' | 'desc';
 
 const UserTable = ({
@@ -100,8 +91,8 @@ const UserTable = ({
   const sortedUsers = React.useMemo(() => {
     if (!users) return [];
     return [...users].sort((a, b) => {
-      const aValue = a[sortKey];
-      const bValue = b[sortKey];
+      const aValue = a[sortKey as keyof User];
+      const bValue = b[sortKey as keyof User];
 
       let compareValue = 0;
       if (aValue === undefined || aValue === null) compareValue = 1;
@@ -172,9 +163,9 @@ const UserTable = ({
                   </Button>
                 </TableHead>
                 <TableHead className="hidden lg:table-cell">
-                   <Button variant="ghost" onClick={() => handleSort('lastLoginAt')} className="px-0">
+                   <Button variant="ghost" onClick={() => handleSort('lastLogin')} className="px-0">
                     LogIn
-                    {renderSortArrow('lastLoginAt')}
+                    {renderSortArrow('lastLogin')}
                   </Button>
                 </TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -193,7 +184,7 @@ const UserTable = ({
                     </div>
                   </TableCell>
                   <TableCell className="hidden md:table-cell">{user.email}</TableCell>
-                  <TableCell className="hidden lg:table-cell">{formatDate(user.lastLoginAt)}</TableCell>
+                  <TableCell className="hidden lg:table-cell">{formatDate(user.lastLogin)}</TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -205,7 +196,7 @@ const UserTable = ({
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => onViewUser(user)}>
                           <BookCopy className="mr-2 h-4 w-4" />
-                          LogIn Records
+                          View Details
                         </DropdownMenuItem>
                          <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => onEditUser(user)}>
@@ -233,17 +224,15 @@ const UserTable = ({
 export default function StudentsPage() {
   const firestore = useFirestore();
   const mainApp = useFirebaseApp();
+  const router = useRouter();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = React.useState<UserRole>("teacher");
 
   const [isAlertOpen, setIsAlertOpen] = React.useState(false);
   const [isFormOpen, setIsFormOpen] = React.useState(false);
-  const [isDetailsOpen, setIsDetailsOpen] = React.useState(false);
   const [userToEdit, setUserToEdit] = React.useState<User | undefined>(undefined);
   const [userToDelete, setUserToDelete] = React.useState<User | null>(null);
-  const [userToView, setUserToView] = React.useState<User | null>(null);
-  const [defaultRole, setDefaultRole] = React.useState<UserRole>('teacher');
-
+  
   const usersQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(collection(firestore, 'users'), where('role', '==', activeTab));
@@ -253,7 +242,6 @@ export default function StudentsPage() {
 
   const handleAddUser = (role: UserRole) => {
     setUserToEdit(undefined);
-    setDefaultRole(role);
     setIsFormOpen(true);
   }
 
@@ -261,10 +249,9 @@ export default function StudentsPage() {
     setUserToEdit(user);
     setIsFormOpen(true);
   }
-
+  
   const handleViewUser = (user: User) => {
-    setUserToView(user);
-    setIsDetailsOpen(true);
+    router.push(`/students/${user.id}`);
   };
   
   const handleSaveUser = async (userData: any, id?: string) => {
@@ -298,7 +285,7 @@ export default function StudentsPage() {
             const userCredential = await createUserWithEmailAndPassword(secondaryAuth, userData.email, userData.password);
             const authUid = userCredential.user.uid;
 
-            const newUser: Omit<User, 'lastLoginAt'> = {
+            const newUser: Omit<User, 'lastLoginAt' | 'lastLogin'> = {
                 id: authUid,
                 name: userData.name,
                 email: userData.email,
@@ -348,17 +335,6 @@ export default function StudentsPage() {
     });
     setIsAlertOpen(false);
     setUserToDelete(null);
-  }
-
-  const formatDateForPopup = (date: any) => {
-    if (!date) return 'No login record';
-    const jsDate = date.toDate ? date.toDate() : new Date(date);
-    if (isNaN(jsDate.getTime())) return 'Invalid date';
-    try {
-        return format(jsDate, 'yyyy-MM-dd HH:mm:ss');
-    } catch {
-        return 'Date format error';
-    }
   }
 
   return (
@@ -413,7 +389,7 @@ export default function StudentsPage() {
         setIsOpen={setIsFormOpen}
         user={userToEdit}
         onSave={handleSaveUser}
-        defaultRole={defaultRole}
+        defaultRole={activeTab}
       />
 
       <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
@@ -430,41 +406,6 @@ export default function StudentsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-        <DialogContent className="max-w-md">
-            <DialogHeader>
-                <DialogTitle>LogIn Records: {userToView?.name}</DialogTitle>
-                <DialogDescription>
-                    User's latest login information from the database.
-                </DialogDescription>
-            </DialogHeader>
-            <div className="mt-4 space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Name:</span>
-                <span className="font-medium">{userToView?.name}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Email:</span>
-                <span className="font-medium">{userToView?.email}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Role:</span>
-                <span className="font-medium">{userToView?.role}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Last Login:</span>
-                <span className="font-medium">{formatDateForPopup(userToView?.lastLoginAt)}</span>
-              </div>
-            </div>
-            <DialogFooter className="mt-4">
-                <DialogClose asChild>
-                    <Button type="button">Close</Button>
-                </DialogClose>
-            </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
     </ProtectedPage>
   );
 }
