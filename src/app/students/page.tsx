@@ -19,7 +19,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import ProtectedPage from "@/components/protected-page";
 import { PageHeader } from "@/components/page-header";
-import { Loader2, PlusCircle, MoreHorizontal, Pencil, Trash2, ArrowUpDown } from "lucide-react";
+import { Loader2, PlusCircle, MoreHorizontal, Pencil, Trash2, ArrowUpDown, Eye } from "lucide-react";
 import { useFirestore, useCollection, useMemoFirebase, useUser, setDocumentNonBlocking, useFirebaseApp } from "@/firebase";
 import { collection, query, where, doc } from "firebase/firestore";
 import type { User, UserRole } from "@/lib/types";
@@ -29,6 +29,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
@@ -40,6 +41,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
 import { UserForm } from "@/components/user-form";
 import { useToast } from '@/hooks/use-toast';
 import { initializeApp, deleteApp } from 'firebase/app';
@@ -62,6 +72,7 @@ const UserTable = ({
   onAddUser,
   onEditUser,
   onDeleteUser,
+  onViewUser,
   users,
   isLoading
 }: {
@@ -69,6 +80,7 @@ const UserTable = ({
   onAddUser: (role: UserRole) => void;
   onEditUser: (user: User) => void;
   onDeleteUser: (user: User) => void;
+  onViewUser: (user: User) => void;
   users: User[] | null;
   isLoading: boolean;
 }) => {
@@ -108,7 +120,11 @@ const UserTable = ({
   const formatDate = (date: any) => {
     if (!date) return '-';
     const jsDate = date.toDate ? date.toDate() : date;
-    return format(jsDate, 'yyyy-MM-dd HH:mm');
+    try {
+        return format(jsDate, 'yyyy-MM-dd HH:mm');
+    } catch {
+        return '-';
+    }
   }
 
   const renderSortArrow = (key: SortKey) => {
@@ -182,6 +198,11 @@ const UserTable = ({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => onViewUser(user)}>
+                          <Eye className="mr-2 h-4 w-4" />
+                          View Details
+                        </DropdownMenuItem>
+                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => onEditUser(user)}>
                           <Pencil className="mr-2 h-4 w-4" />
                           Edit
@@ -212,8 +233,10 @@ export default function StudentsPage() {
 
   const [isAlertOpen, setIsAlertOpen] = React.useState(false);
   const [isFormOpen, setIsFormOpen] = React.useState(false);
+  const [isDetailsOpen, setIsDetailsOpen] = React.useState(false);
   const [userToEdit, setUserToEdit] = React.useState<User | undefined>(undefined);
   const [userToDelete, setUserToDelete] = React.useState<User | null>(null);
+  const [userToView, setUserToView] = React.useState<User | null>(null);
   const [defaultRole, setDefaultRole] = React.useState<UserRole>('teacher');
 
   const usersQuery = useMemoFirebase(() => {
@@ -233,6 +256,11 @@ export default function StudentsPage() {
     setUserToEdit(user);
     setIsFormOpen(true);
   }
+
+  const handleViewUser = (user: User) => {
+    setUserToView(user);
+    setIsDetailsOpen(true);
+  };
   
   const handleSaveUser = async (userData: any, id?: string) => {
     if (!firestore || !mainApp) {
@@ -317,6 +345,17 @@ export default function StudentsPage() {
     setUserToDelete(null);
   }
 
+  const formatJson = (data: any) => {
+    // A custom replacer to handle Firestore Timestamps
+    const replacer = (key: string, value: any) => {
+        if (value && typeof value === 'object' && value.toDate) {
+            return value.toDate().toISOString();
+        }
+        return value;
+    };
+    return JSON.stringify(data, replacer, 2);
+  }
+
   return (
     <ProtectedPage allowedRoles={["admin", "teacher"]}>
       <PageHeader
@@ -335,6 +374,7 @@ export default function StudentsPage() {
             onAddUser={handleAddUser}
             onEditUser={handleEditUser}
             onDeleteUser={openDeleteDialog}
+            onViewUser={handleViewUser}
             users={users}
             isLoading={isLoading}
           />
@@ -345,6 +385,7 @@ export default function StudentsPage() {
             onAddUser={handleAddUser}
             onEditUser={handleEditUser}
             onDeleteUser={openDeleteDialog}
+            onViewUser={handleViewUser}
             users={users}
             isLoading={isLoading}
           />
@@ -355,6 +396,7 @@ export default function StudentsPage() {
             onAddUser={handleAddUser}
             onEditUser={handleEditUser}
             onDeleteUser={openDeleteDialog}
+            onViewUser={handleViewUser}
             users={users}
             isLoading={isLoading}
           />
@@ -383,6 +425,26 @@ export default function StudentsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+        <DialogContent className="max-w-2xl">
+            <DialogHeader>
+                <DialogTitle>User Details: {userToView?.name}</DialogTitle>
+                <DialogDescription>
+                    Raw data from the Firestore database for this user.
+                </DialogDescription>
+            </DialogHeader>
+            <div className="mt-4 max-h-[60vh] overflow-y-auto rounded-md bg-muted/50 p-4">
+                <pre className="text-sm font-code">{userToView ? formatJson(userToView) : 'No user selected.'}</pre>
+            </div>
+            <DialogFooter className="mt-2">
+                <DialogClose asChild>
+                    <Button type="button">Close</Button>
+                </DialogClose>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </ProtectedPage>
   );
 }
