@@ -31,16 +31,16 @@ export default function HomePage() {
       const userDocRef = doc(firestore, 'users', user.uid);
       
       // Non-blocking update for last login
-      setDocumentNonBlocking(userDocRef, { lastLoginAt: new Date() }, { merge: true });
+      setDocumentNonBlocking(userDocRef, { lastLogin: new Date() }, { merge: true });
 
       const userDoc = await getDoc(userDocRef);
       if (userDoc.exists()) {
         const userData = userDoc.data() as User;
         setDbUser(userData);
-        if (userData.role === 'admin' || userData.role === 'teacher') {
-            router.replace(roleRedirects[userData.role]);
+        if (userData.role === 'admin') {
+            router.replace(roleRedirects.admin);
         } else {
-            // Non-admin/teacher users are logged out and redirected.
+            // Non-admin users are logged out and redirected.
             router.replace('/login'); 
         }
       } else {

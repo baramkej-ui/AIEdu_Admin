@@ -73,7 +73,7 @@ export function AuthForm({ type }: AuthFormProps) {
 
       const userDocRef = doc(firestore, 'users', user.uid);
       
-      setDocumentNonBlocking(userDocRef, { lastLoginAt: new Date() }, { merge: true });
+      setDocumentNonBlocking(userDocRef, { lastLogin: new Date() }, { merge: true });
 
       const userDoc = await getDoc(userDocRef);
 
@@ -94,15 +94,20 @@ export function AuthForm({ type }: AuthFormProps) {
           }
       } else {
           await auth.signOut();
-          throw new Error("User role information not found.");
+          toast({
+            variant: 'destructive',
+            title: 'Login Failed',
+            description: "User data not found in the database. Contact support.",
+          });
       }
     } catch (error: any) {
         const errorCode = error.code;
-        let errorMessage = "An error occurred.";
+        let errorMessage = "An error occurred during login.";
         if (errorCode === 'auth/user-not-found' || errorCode === 'auth/wrong-password' || errorCode === 'auth/invalid-credential') {
           errorMessage = 'Incorrect email or password.';
         } else {
-            errorMessage = error.message;
+            console.error("Login Error:", error);
+            errorMessage = "An unexpected error occurred. Please try again.";
         }
         toast({
           variant: 'destructive',
