@@ -27,15 +27,16 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function UserDetailPage({ params }: { params: { id: string } }) {
   const firestore = useFirestore();
+  const userId = params.id;
 
   const userDocRef = useMemoFirebase(() => 
-    firestore ? doc(firestore, 'users', params.id) : null, 
-  [firestore, params.id]);
+    firestore ? doc(firestore, 'users', userId) : null, 
+  [firestore, userId]);
   const { data: user, isLoading: userLoading } = useDoc<User>(userDocRef);
 
   const loginHistoryQuery = useMemoFirebase(() => 
-    firestore ? query(collection(firestore, 'users', params.id, 'loginHistory'), orderBy('timestamp', 'desc')) : null,
-  [firestore, params.id]);
+    firestore ? query(collection(firestore, 'users', userId, 'loginHistory'), orderBy('timestamp', 'desc')) : null,
+  [firestore, userId]);
   const { data: loginHistory, isLoading: historyLoading } = useCollection<LoginRecord>(loginHistoryQuery);
 
   const isLoading = userLoading || historyLoading;
