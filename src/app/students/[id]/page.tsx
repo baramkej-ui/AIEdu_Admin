@@ -30,12 +30,12 @@ export default function UserDetailPage({ params }: { params: { id: string } }) {
   const userId = params.id;
 
   const userDocRef = useMemoFirebase(() => 
-    firestore ? doc(firestore, 'users', userId) : null, 
+    firestore && userId ? doc(firestore, 'users', userId) : null, 
   [firestore, userId]);
   const { data: user, isLoading: userLoading } = useDoc<User>(userDocRef);
 
   const loginHistoryQuery = useMemoFirebase(() => 
-    firestore ? query(collection(firestore, 'users', userId, 'loginHistory'), orderBy('timestamp', 'desc')) : null,
+    firestore && userId ? query(collection(firestore, 'users', userId, 'loginHistory'), orderBy('timestamp', 'desc')) : null,
   [firestore, userId]);
   const { data: loginHistory, isLoading: historyLoading } = useCollection<LoginRecord>(loginHistoryQuery);
 
