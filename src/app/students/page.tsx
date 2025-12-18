@@ -19,7 +19,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import ProtectedPage from "@/components/protected-page";
 import { PageHeader } from "@/components/page-header";
-import { Loader2, PlusCircle, MoreHorizontal, Pencil, Trash2, ArrowUpDown, Eye } from "lucide-react";
+import { Loader2, PlusCircle, MoreHorizontal, Pencil, Trash2, ArrowUpDown, BookCopy } from "lucide-react";
 import { useFirestore, useCollection, useMemoFirebase, useUser, setDocumentNonBlocking, useFirebaseApp } from "@/firebase";
 import { collection, query, where, doc } from "firebase/firestore";
 import type { User, UserRole } from "@/lib/types";
@@ -119,7 +119,12 @@ const UserTable = ({
 
   const formatDate = (date: any) => {
     if (!date) return '-';
-    const jsDate = date.toDate ? date.toDate() : date;
+    // Firestore Timestamps have a toDate() method. Check for it.
+    const jsDate = date.toDate ? date.toDate() : new Date(date);
+    // Validate if the created date is valid
+    if (isNaN(jsDate.getTime())) {
+        return '-';
+    }
     try {
         return format(jsDate, 'yyyy-MM-dd HH:mm');
     } catch {
@@ -199,8 +204,8 @@ const UserTable = ({
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => onViewUser(user)}>
-                          <Eye className="mr-2 h-4 w-4" />
-                          View Details
+                          <BookCopy className="mr-2 h-4 w-4" />
+                          LogIn Records
                         </DropdownMenuItem>
                          <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => onEditUser(user)}>
@@ -345,15 +350,15 @@ export default function StudentsPage() {
     setUserToDelete(null);
   }
 
-  const formatJson = (data: any) => {
-    // A custom replacer to handle Firestore Timestamps
-    const replacer = (key: string, value: any) => {
-        if (value && typeof value === 'object' && value.toDate) {
-            return value.toDate().toISOString();
-        }
-        return value;
-    };
-    return JSON.stringify(data, replacer, 2);
+  const formatDateForPopup = (date: any) => {
+    if (!date) return 'No login record';
+    const jsDate = date.toDate ? date.toDate() : new Date(date);
+    if (isNaN(jsDate.getTime())) return 'Invalid date';
+    try {
+        return format(jsDate, 'yyyy-MM-dd HH:mm:ss');
+    } catch {
+        return 'Date format error';
+    }
   }
 
   return (
@@ -427,17 +432,32 @@ export default function StudentsPage() {
       </AlertDialog>
 
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-md">
             <DialogHeader>
-                <DialogTitle>User Details: {userToView?.name}</DialogTitle>
+                <DialogTitle>LogIn Records: {userToView?.name}</DialogTitle>
                 <DialogDescription>
-                    Raw data from the Firestore database for this user.
+                    User's latest login information from the database.
                 </DialogDescription>
             </DialogHeader>
-            <div className="mt-4 max-h-[60vh] overflow-y-auto rounded-md bg-muted/50 p-4">
-                <pre className="text-sm font-code">{userToView ? formatJson(userToView) : 'No user selected.'}</pre>
+            <div className="mt-4 space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Name:</span>
+                <span className="font-medium">{userToView?.name}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Email:</span>
+                <span className="font-medium">{userToView?.email}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Role:</span>
+                <span className="font-medium">{userToView?.role}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Last Login:</span>
+                <span className="font-medium">{formatDateForPopup(userToView?.lastLoginAt)}</span>
+              </div>
             </div>
-            <DialogFooter className="mt-2">
+            <DialogFooter className="mt-4">
                 <DialogClose asChild>
                     <Button type="button">Close</Button>
                 </DialogClose>
