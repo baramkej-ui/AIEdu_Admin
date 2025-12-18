@@ -1,10 +1,10 @@
 'use client';
-import { useUser, useFirestore } from '@/firebase';
+import { useUser, useFirestore, setDocumentNonBlocking } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import type { UserRole, User } from '@/lib/types';
 import { Loader2 } from 'lucide-react';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, serverTimestamp } from 'firebase/firestore';
 
 const roleRedirects: Record<UserRole, string> = {
   admin: '/dashboard',
@@ -29,14 +29,18 @@ export default function HomePage() {
     const fetchUserRole = async () => {
       if (!firestore) return;
       const userDocRef = doc(firestore, 'users', user.uid);
+      
+      // Non-blocking update for last login
+      setDocumentNonBlocking(userDocRef, { lastLoginAt: new Date() }, { merge: true });
+
       const userDoc = await getDoc(userDocRef);
       if (userDoc.exists()) {
         const userData = userDoc.data() as User;
         setDbUser(userData);
-        if (userData.role === 'admin') {
+        if (userData.role === 'admin' || userData.role === 'teacher') {
             router.replace(roleRedirects[userData.role]);
         } else {
-            // Non-admin users are handled by protected routes, but as a fallback
+            // Non-admin/teacher users are logged out and redirected.
             router.replace('/login'); 
         }
       } else {

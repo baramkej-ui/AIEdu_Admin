@@ -18,9 +18,9 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth, useFirestore } from '@/firebase';
+import { useAuth, useFirestore, setDocumentNonBlocking } from '@/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, serverTimestamp } from 'firebase/firestore';
 import type { UserRole, User } from '@/lib/types';
 
 const formSchema = z.object({
@@ -72,19 +72,23 @@ export function AuthForm({ type }: AuthFormProps) {
       const user = userCredential.user;
 
       const userDocRef = doc(firestore, 'users', user.uid);
+      
+      // Update last login time
+      setDocumentNonBlocking(userDocRef, { lastLoginAt: new Date() }, { merge: true });
+
       const userDoc = await getDoc(userDocRef);
 
       if (userDoc.exists()) {
           const userData = userDoc.data() as User;
-          if (userData.role !== 'admin') {
+          if (userData.role !== 'admin' && userData.role !== 'teacher') {
             await auth.signOut();
             toast({
               variant: 'destructive',
               title: 'Login Failed',
-              description: 'Only admin accounts can log in.',
+              description: 'Only admin or teacher accounts can log in.',
             });
           } else {
-            toast({ title: "Login Successful", description: "Redirecting to dashboard..." });
+            toast({ title: "Login Successful", description: "Redirecting..." });
             router.push(roleRedirects[userData.role]);
           }
       } else {

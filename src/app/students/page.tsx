@@ -19,7 +19,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import ProtectedPage from "@/components/protected-page";
 import { PageHeader } from "@/components/page-header";
-import { Loader2, PlusCircle, MoreHorizontal, Pencil, Trash2, UserCog, Users, UserCheck } from "lucide-react";
+import { Loader2, PlusCircle, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { useFirestore, useCollection, useMemoFirebase, useUser, setDocumentNonBlocking, useFirebaseApp } from "@/firebase";
 import { collection, query, where, doc } from "firebase/firestore";
 import type { User, UserRole } from "@/lib/types";
@@ -44,7 +44,7 @@ import { UserForm } from "@/components/user-form";
 import { useToast } from '@/hooks/use-toast';
 import { initializeApp, deleteApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
-import { Skeleton } from '@/components/ui/skeleton';
+import { format } from 'date-fns';
 
 
 const roleLabels: Record<UserRole, string> = {
@@ -74,6 +74,13 @@ const UserTable = ({
     return name?.split(' ').map(n => n[0]).join('').toUpperCase() || '';
   }
 
+  const formatDate = (date: any) => {
+    if (!date) return '-';
+    // Firestore Timestamps can be converted to JS Date objects
+    const jsDate = date.toDate ? date.toDate() : date;
+    return format(jsDate, 'yyyy-MM-dd HH:mm');
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -96,6 +103,7 @@ const UserTable = ({
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead className="hidden md:table-cell">Email</TableHead>
+                {role === 'teacher' && <TableHead className="hidden lg:table-cell">LogIn</TableHead>}
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -112,6 +120,7 @@ const UserTable = ({
                     </div>
                   </TableCell>
                   <TableCell className="hidden md:table-cell">{user.email}</TableCell>
+                  {role === 'teacher' && <TableCell className="hidden lg:table-cell">{formatDate(user.lastLoginAt)}</TableCell>}
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -147,13 +156,13 @@ export default function StudentsPage() {
   const firestore = useFirestore();
   const mainApp = useFirebaseApp();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = React.useState<UserRole>("admin");
+  const [activeTab, setActiveTab] = React.useState<UserRole>("teacher");
 
   const [isAlertOpen, setIsAlertOpen] = React.useState(false);
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [userToEdit, setUserToEdit] = React.useState<User | undefined>(undefined);
   const [userToDelete, setUserToDelete] = React.useState<User | null>(null);
-  const [defaultRole, setDefaultRole] = React.useState<UserRole>('admin');
+  const [defaultRole, setDefaultRole] = React.useState<UserRole>('teacher');
 
   const usersQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -204,7 +213,7 @@ export default function StudentsPage() {
             const userCredential = await createUserWithEmailAndPassword(secondaryAuth, userData.email, userData.password);
             const authUid = userCredential.user.uid;
 
-            const newUser: User = {
+            const newUser: Omit<User, 'lastLoginAt'> = {
                 id: authUid,
                 name: userData.name,
                 email: userData.email,

@@ -6,6 +6,7 @@ export type User = {
   email: string;
   role: UserRole;
   avatarUrl?: string;
+  lastLoginAt?: Date;
 };
 
 export type Problem = {
