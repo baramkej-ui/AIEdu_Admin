@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/table";
 import ProtectedPage from "@/components/protected-page";
 import { PageHeader } from "@/components/page-header";
-import { notFound } from "next/navigation";
+import { notFound, useParams } from "next/navigation";
 import { useFirestore, useDoc, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, doc, query, orderBy } from "firebase/firestore";
 import type { User, LoginRecord } from "@/lib/types";
@@ -25,9 +25,10 @@ import { format } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 
-export default function UserDetailPage({ params }: { params: { id: string } }) {
+export default function UserDetailPage() {
   const firestore = useFirestore();
-  const userId = params.id;
+  const params = useParams();
+  const userId = params.id as string;
 
   const userDocRef = useMemoFirebase(() => 
     firestore && userId ? doc(firestore, 'users', userId) : null, 
