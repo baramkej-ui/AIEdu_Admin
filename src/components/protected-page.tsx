@@ -22,37 +22,62 @@ export default function ProtectedPage({ children, allowedRoles }: ProtectedPageP
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
-  const [dbUser, setDbUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isAuthorized, setIsAuthorized] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(true);
 
   useEffect(() => {
-    if (isUserLoading) return;
+    // Wait until the initial user loading is finished.
+    if (isUserLoading) {
+      return;
+    }
+
+    // If there is no authenticated user, redirect to login.
     if (!user) {
       router.replace('/login');
       return;
     }
-
-    const fetchUserRole = async () => {
-      if (!firestore) return;
-      setIsLoading(true);
-      const userDocRef = doc(firestore, 'users', user.uid);
-      const userDoc = await getDoc(userDocRef);
-      if (userDoc.exists()) {
-        const userData = userDoc.data() as User;
-        setDbUser(userData);
-        if (!allowedRoles.includes(userData.role)) {
-          router.replace(roleRedirects[userData.role] || '/login');
-        }
-      } else {
+    
+    // If we don't have firestore instance, we can't verify role.
+    if (!firestore) {
+        // This case should ideally not happen if provider is set up correctly
         router.replace('/login');
+        return;
+    }
+
+    const verifyUserRole = async () => {
+      try {
+        const userDocRef = doc(firestore, 'users', user.uid);
+        const userDoc = await getDoc(userDocRef);
+
+        if (userDoc.exists()) {
+          const userData = userDoc.data() as User;
+          const userRole = userData.role;
+
+          if (userRole && allowedRoles.includes(userRole)) {
+            setIsAuthorized(true);
+          } else {
+            // User has a role, but it's not allowed for this page.
+            // Redirect them to their default page or login.
+            const redirectPath = roleRedirects[userRole] || '/login';
+            router.replace(redirectPath);
+          }
+        } else {
+          // User is authenticated but has no data in Firestore.
+          router.replace('/login');
+        }
+      } catch (error) {
+        console.error("Error verifying user role:", error);
+        router.replace('/login');
+      } finally {
+        setIsVerifying(false);
       }
-      setIsLoading(false);
     };
 
-    fetchUserRole();
+    verifyUserRole();
+
   }, [user, isUserLoading, router, firestore, allowedRoles]);
 
-  if (isUserLoading || isLoading || !dbUser) {
+  if (isVerifying || isUserLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -60,11 +85,11 @@ export default function ProtectedPage({ children, allowedRoles }: ProtectedPageP
     );
   }
 
-  if (!allowedRoles.includes(dbUser.role)) {
+  if (!isAuthorized) {
+     // This prevents a flash of content while redirecting.
     return (
-      <div className="flex h-screen items-center justify-center bg-background">
-        <p>You do not have permission. Redirecting...</p>
-        <Loader2 className="ml-2 h-6 w-6 animate-spin text-primary" />
+        <div className="flex h-screen items-center justify-center bg-background">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
       </div>
     );
   }
