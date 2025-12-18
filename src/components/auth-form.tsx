@@ -73,7 +73,7 @@ export function AuthForm({ type }: AuthFormProps) {
 
       const userDocRef = doc(firestore, 'users', user.uid);
       
-      // Update last login time
+      // Immediately update last login time upon successful authentication
       setDocumentNonBlocking(userDocRef, { lastLoginAt: new Date() }, { merge: true });
 
       const userDoc = await getDoc(userDocRef);
