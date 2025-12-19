@@ -52,5 +52,4 @@ const nextConfig: NextConfig = {
   }
 };
 
-// Re-trigger build to resolve security warning and ensure env var is updated.
 export default nextConfig;
