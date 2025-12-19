@@ -33,6 +33,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="flex-1 overflow-y-auto p-2">
           <SidebarNav isCollapsed={isCollapsed} />
         </div>
+        {!isCollapsed && (
+            <div className="mt-auto p-4 text-center text-xs text-muted-foreground">
+              <p>ver. {process.env.NEXT_PUBLIC_BUILD_VERSION}</p>
+            </div>
+        )}
       </aside>
       <div className="flex flex-1 flex-col">
         <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-background/80 px-4 backdrop-blur-sm">
