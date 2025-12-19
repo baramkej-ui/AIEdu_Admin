@@ -15,3 +15,4 @@ env:
   - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
     value: "studio-608619568-fce2e"
     availability: ["BUILD", "RUNTIME"]
+    // test
