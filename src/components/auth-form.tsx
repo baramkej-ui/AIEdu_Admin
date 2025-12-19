@@ -79,7 +79,6 @@ export function AuthForm({ type }: AuthFormProps) {
           const userRole = userData.role ? userData.role.trim() : undefined;
           
           if (userRole === 'admin') {
-            toast({ title: "Login Successful", description: "Redirecting..." });
             router.push(roleRedirects.admin);
           } else {
             await auth.signOut();

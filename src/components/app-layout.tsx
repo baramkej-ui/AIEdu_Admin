@@ -35,7 +35,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
         <div className="mt-auto p-2 text-center text-xs text-muted-foreground">
           {isCollapsed ? (
-            <p className="[writing-mode:vertical-rl] mx-auto">ver.</p>
+            <p>ver.</p>
           ) : (
             <p>ver. {process.env.NEXT_PUBLIC_BUILD_VERSION}</p>
           )}
